@@ -5,8 +5,8 @@
 
 // Simple server based on https://bshaffer.github.io/oauth2-server-php-docs/cookbook
 
-// include our OAuth2 Server object
-require_once __DIR__.'/server.php';
+// Include the common auth system files (including the OAuth2 Server object).
+require_once(__DIR__.'/authsystem.inc.php');
 
 // Handle a request to a resource and authenticate the access token
 if (!$server->verifyResourceRequest(OAuth2\Request::createFromGlobals())) {

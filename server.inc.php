@@ -5,19 +5,14 @@
 
 // Simple server based on https://bshaffer.github.io/oauth2-server-php-docs/cookbook
 
-$dsn      = 'mysql:dbname=kairo_at_auth;host=localhost';
-$username = 'kairo_at_auth';
-$password = '6z0KIuUsHJhgD5rB';
-
-// error reporting (this is a demo, after all!)
-ini_set('display_errors',1);error_reporting(E_ALL);
+// $dbata needs to be set and be an associative array with the members 'dsn', 'username', and 'password'.
 
 // Autoloading (composer is preferred, but for this example let's just do this)
 require_once('../oauth2-server-php/src/OAuth2/Autoloader.php');
 OAuth2\Autoloader::register();
 
 // $dsn is the Data Source Name for your database, for exmaple "mysql:dbname=my_oauth2_db;host=localhost"
-$storage = new OAuth2\Storage\Pdo(array('dsn' => $dsn, 'username' => $username, 'password' => $password));
+$storage = new OAuth2\Storage\Pdo($dbdata);
 
 // Pass a storage object or array of storage objects to the OAuth2 server class
 $server = new OAuth2\Server($storage);

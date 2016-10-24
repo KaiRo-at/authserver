@@ -105,21 +105,7 @@ if (!count($errors)) {
           else {
             // new user: check password, create user and send verification; existing users: re-send verification or send password change instructions
             if (array_key_exists('pwd', $_POST)) {
-              $new_password = strval($_POST['pwd']);
-              if ($new_password != trim($new_password)) {
-                $errors[] = _('Password must not start or end with a whitespace character like a space.');
-              }
-              if (strlen($new_password) < 8) { $errors[] = sprintf(_('Password too short (min. %s characters).'), 8); }
-              if (strlen($new_password) > 70) { $errors[] = sprintf(_('Password too long (max. %s characters).'), 70); }
-              if (strtolower($new_password) == strtolower($_POST['email']))  {
-                $errors[] = _('The passwort can not be equal to your email.');
-              }
-              if ((strlen($new_password) < 15) && (preg_match('/^[a-zA-Z]*$/', $new_password))) {
-                $errors[] = sprintf(_('Your password must use letters other than normal characters or contain least 15 characters.'), 15);
-              }
-              if (strlen(count_chars($new_password, 3)) < 5) {
-                $errors[] = sprintf(_('Password does have to contain at least %s different characters.'), 5);
-              }
+              $errors += checkPasswordConstraints(strval($_POST['pwd']), $_POST['email']);
             }
             if (!count($errors)) {
               // Put user into the DB
@@ -173,6 +159,12 @@ if (!count($errors)) {
       }
       elseif (array_key_exists('reset', $_GET)) {
         if ($session['logged_in']) {
+          $result = $db->prepare('SELECT `id`,`email` FROM `auth_users` WHERE `id` = :userid;');
+          $result->execute(array(':userid' => $session['user']));
+          $user = $result->fetch(PDO::FETCH_ASSOC);
+          if (!$user['id']) {
+            // XXXlog: unexpected failure to fetch user data!
+          }
           $pagetype = 'resetpwd';
         }
         else {
@@ -202,6 +194,21 @@ if (!count($errors)) {
         $user = $result->fetch(PDO::FETCH_ASSOC);
         if (!$user['id']) {
           // XXXlog: unexpected failure to fetch user data!
+        }
+        // Password reset requested.
+        if (array_key_exists('pwd', $_POST) && array_key_exists('reset', $_POST) && array_key_exists('tcode', $_POST)) {
+          $errors += checkPasswordConstraints(strval($_POST['pwd']), $user['email']);
+          if (!count($errors)) {
+            $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
+            $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash WHERE `id` = :userid;');
+            if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $session['user']))) {
+              // XXXlog: Password reset failure!
+              $errors[] = _('Password reset failed. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+            }
+            else {
+              $pagetype = 'pwd_reset_done';
+            }
+          }
         }
       }
     }
@@ -245,25 +252,37 @@ if (!count($errors)) {
     $inptxt->setAttribute('required', '');
     $inptxt->setAttribute('placeholder', _('Email'));
     $litem = $ulist->appendElement('li');
+    $litem->appendInputHidden('tcode', createTimeCode($session));
     $submit = $litem->appendInputSubmit(_('Send instructions to email'));
   }
   elseif ($pagetype == 'resetpwd') {
     $para = $body->appendElement('p', _('You can set a new password here.'));
     $para->setAttribute('class', '');
-    $form = $body->appendForm('?reset', 'POST', 'newpwdform');
+    $form = $body->appendForm('?', 'POST', 'newpwdform');
     $form->setAttribute('id', 'loginform');
     $form->setAttribute('class', 'loginarea hidden');
     $ulist = $form->appendElement('ul');
     $ulist->setAttribute('class', 'flat login');
+    $litem = $ulist->appendElement('li');
+    $litem->setAttribute('class', 'donotshow');
+    $inptxt = $litem->appendInputEmail('email_hidden', 30, 20, 'login_email', $user['email']);
+    $inptxt->setAttribute('autocomplete', 'email');
+    $inptxt->setAttribute('placeholder', _('Email'));
     $litem = $ulist->appendElement('li');
     $inptxt = $litem->appendInputPassword('pwd', 20, 20, 'login_pwd', '');
     $inptxt->setAttribute('required', '');
     $inptxt->setAttribute('placeholder', _('Password'));
     $inptxt->setAttribute('class', 'login');
     $litem = $ulist->appendElement('li');
+    $litem->appendInputHidden('reset', '');
+    $litem->appendInputHidden('tcode', createTimeCode($session));
     $submit = $litem->appendInputSubmit(_('Save password'));
   }
   elseif ($session['logged_in']) {
+    if ($pagetype == 'reset_done') {
+      $para = $body->appendElement('p', _('Your password has successfully been reset.'));
+      $para->setAttribute('class', 'resetinfo done');
+    }
     $div = $body->appendElement('div', $user['email']);
     $div->setAttribute('class', 'loginheader');
     $div = $body->appendElement('div');
@@ -279,6 +298,10 @@ if (!count($errors)) {
     if ($pagetype == 'verification_done') {
       $para = $body->appendElement('p', _('Hooray! Your email was successfully confirmed! You can log in now.'));
       $para->setAttribute('class', 'verifyinfo done');
+    }
+    elseif ($pagetype == 'reset_done') {
+      $para = $body->appendElement('p', _('Your password has successfully been reset. You can log in now with the new password.'));
+      $para->setAttribute('class', 'resetinfo done');
     }
     $form = $body->appendForm('?', 'POST', 'loginform');
     $form->setAttribute('id', 'loginform');
@@ -305,7 +328,8 @@ if (!count($errors)) {
     $label->setAttribute('id', 'rememprompt');
     $label->setAttribute('class', 'loginprompt');
     $litem = $ulist->appendElement('li');
-    $submit = $litem->appendInputSubmit(_('Log in'));
+    $litem->appendInputHidden('tcode', createTimeCode($session));
+    $submit = $litem->appendInputSubmit(_('Log in / Register'));
     $submit->setAttribute('class', 'loginbutton');
   }
 }
@@ -324,4 +348,43 @@ if (count($errors)) {
 
 // Send HTML to client.
 print($document->saveHTML());
+
+// ********** helper functions **********
+
+function checkPasswordConstraints($new_password, $user_email) {
+  $errors = array();
+  if ($new_password != trim($new_password)) {
+    $errors[] = _('Password must not start or end with a whitespace character like a space.');
+  }
+  if (strlen($new_password) < 8) { $errors[] = sprintf(_('Password too short (min. %s characters).'), 8); }
+  if (strlen($new_password) > 70) { $errors[] = sprintf(_('Password too long (max. %s characters).'), 70); }
+  if ((strtolower($new_password) == strtolower($user_email)) ||
+      in_array(strtolower($new_password), preg_split("/[@\.]+/", strtolower($user_email)))) {
+    $errors[] = _('The passwort can not be equal to your email or any part of it.');
+  }
+  if ((strlen($new_password) < 15) && (preg_match('/^[a-zA-Z]+$/', $new_password))) {
+    $errors[] = sprintf(_('Your password must use characters other than normal letters or contain least %s characters.'), 15);
+  }
+  if (preg_match('/^\d+$/', $new_password)) {
+    $errors[] = sprintf(_('Your password cannot consist only of numbers.'), 15);
+  }
+  if (strlen(count_chars($new_password, 3)) < 5) {
+    $errors[] = sprintf(_('Password does have to contain at least %s different characters.'), 5);
+  }
+  return $errors;
+}
+
+function createTimeCode($session) {
+  // Matches TOTP algorithms, see https://en.wikipedia.org/wiki/Time-based_One-time_Password_Algorithm
+  $valid_seconds = 600; $code_digits = 8;
+  $time = time();
+  $rest = $time % $valid_seconds; // T0, will be sent as part of code to make it valid for the full duration.
+  $counter = floor(($time - $rest) / $valid_seconds);
+  $hmac = mhash(MHASH_SHA1, $counter, $session['sesskey']);
+  $offset = hexdec(substr(bin2hex(substr($hmac, -1)), -1)); // Get the last 4 bits as a number.
+  $totp = hexdec(bin2hex(substr($hmac, $offset, 4))) & 0x7FFFFFFF; // Take 4 bytes at the offset, discard highest bit.
+  $totp_value = sprintf('%0'.$code_digits.'d', substr($totp, -$code_digits));
+  return $rest.'.'.$totp_value;
+}
+
 ?>

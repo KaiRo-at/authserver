@@ -37,6 +37,11 @@ form.flat {
 .warn {
   color: red;
 }
+.donotshow {
+  position: absolute;
+  right: -1000px;
+  opacity: 0;
+}
 
 input:invalid {
   box-shadow: 0 0 2px 1px red;

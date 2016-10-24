@@ -10,6 +10,8 @@ $pwd_options = array('cost' => 10);
 
 // Extended DOM document class
 require_once('../kairo/include/cbsm/util/document.php-class');
+// Class for sending emails
+require_once('../kairo/include/classes/email.php-class');
 
 bindtextdomain('kairo_auth', 'en'); // XXX: Should negotiate locale.
 bind_textdomain_codeset('kairo_auth', 'utf-8');

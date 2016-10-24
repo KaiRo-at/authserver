@@ -1,5 +1,43 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 body {
   font-family: sans-serif;
 /*  margin: 0; */
   background-color: #FFFFEE;
+}
+
+ul.flat {
+ list-style-type: none;
+ margin: 0em;
+ padding: 0px;
+}
+ul.flat li {
+ margin: 0 0 0.2em 0;
+ padding: 0px;
+}
+p.flat {
+  border: 0px;
+  margin: 0px;
+  padding: 0px;
+}
+form.flat {
+  border: 0px;
+  margin: 0px;
+  padding: 0px;
+}
+
+.small {
+  font-size: 0.75em;
+}
+.hidden {
+  display: none;
+}
+.warn {
+  color: red;
+}
+
+input:invalid {
+  box-shadow: 0 0 2px 1px red;
 }

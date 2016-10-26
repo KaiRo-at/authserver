@@ -1,4 +1,8 @@
 <?php
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 // error reporting (for testing)
 ini_set('display_errors', 1); error_reporting(E_ALL);
 
@@ -12,6 +16,8 @@ $pwd_options = array('cost' => 10);
 require_once('../kairo/include/cbsm/util/document.php-class');
 // Class for sending emails
 require_once('../kairo/include/classes/email.php-class');
+// Class for sending emails
+require_once(__DIR__.'/authutils.php-class');
 
 bindtextdomain('kairo_auth', 'en'); // XXX: Should negotiate locale.
 bind_textdomain_codeset('kairo_auth', 'utf-8');
@@ -20,8 +26,26 @@ bind_textdomain_codeset('kairo_auth', 'utf-8');
 $db = new PDO($dbdata['dsn'], $dbdata['username'], $dbdata['password']);
 
 /* Creating the DB tables:
-CREATE TABLE `auth_sessions` ( `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT , `sesskey` VARCHAR(150) NOT NULL DEFAULT '' , `user` MEDIUMINT UNSIGNED NULL DEFAULT NULL , `logged_in` BOOLEAN NOT NULL DEFAULT FALSE , `time_created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP , `time_expire` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP , PRIMARY KEY (`id`), INDEX (`sesskey`), INDEX (`time_expire`));
-CREATE TABLE `auth_users` ( `id` MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT , `email` VARCHAR(255) NOT NULL , `pwdhash` VARCHAR(255) NOT NULL , `status` ENUM('unverified','ok') NOT NULL DEFAULT 'unverified' , `verify_hash` VARCHAR(150) NULL DEFAULT NULL , PRIMARY KEY (`id`), UNIQUE (`email`));
+CREATE TABLE `auth_sessions` (
+ `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT ,
+ `sesskey` VARCHAR(150) NOT NULL DEFAULT '' ,
+ `user` MEDIUMINT UNSIGNED NULL DEFAULT NULL ,
+ `logged_in` BOOLEAN NOT NULL DEFAULT FALSE ,
+ `time_created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
+ `time_expire` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
+ PRIMARY KEY (`id`),
+ INDEX (`sesskey`),
+ INDEX (`time_expire`)
+);
+CREATE TABLE `auth_users` (
+ `id` MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT ,
+ `email` VARCHAR(255) NOT NULL ,
+ `pwdhash` VARCHAR(255) NOT NULL ,
+ `status` ENUM('unverified','ok') NOT NULL DEFAULT 'unverified' ,
+ `verify_hash` VARCHAR(150) NULL DEFAULT NULL ,
+ PRIMARY KEY (`id`),
+ UNIQUE (`email`)
+);
 */
 
 // include our OAuth2 Server object

@@ -53,7 +53,7 @@ if (!count($errors)) {
         if (!preg_match('/^[^@]+@[^@]+\.[^@]+$/', $_POST['email'])) {
           $errors[] = _('The email address is invalid.');
         }
-        elseif (verifyTimeCode(@$_POST['tcode'], $session)) {
+        elseif (AuthUtils::verifyTimeCode(@$_POST['tcode'], $session)) {
           $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash` FROM `auth_users` WHERE `email` = :email;');
           $result->execute(array(':email' => $_POST['email']));
           $user = $result->fetch(PDO::FETCH_ASSOC);
@@ -72,7 +72,7 @@ if (!count($errors)) {
               }
 
               // Log user in - update session key for that, see https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines#Login
-              $sesskey = createSessionKey();
+              $sesskey = AuthUtils::createSessionKey();
               setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
               // If the session has a user set, create a new one - otherwise take existing session entry.
               if (intval($session['user'])) {
@@ -115,13 +115,13 @@ if (!count($errors)) {
           else {
             // new user: check password, create user and send verification; existing users: re-send verification or send password change instructions
             if (array_key_exists('pwd', $_POST)) {
-              $errors += checkPasswordConstraints(strval($_POST['pwd']), $_POST['email']);
+              $errors += AuthUtils::checkPasswordConstraints(strval($_POST['pwd']), $_POST['email']);
             }
             if (!count($errors)) {
               // Put user into the DB
               if (!$user['id']) {
                 $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
-                $vcode = createVerificationCode();
+                $vcode = AuthUtils::createVerificationCode();
                 $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
                 if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
                   // XXXlog: User insertion failure!
@@ -162,14 +162,14 @@ if (!count($errors)) {
               }
               else {
                 // Password reset requested with "Password forgotten?" function.
-                $vcode = createVerificationCode();
+                $vcode = AuthUtils::createVerificationCode();
                 $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
                 if (!$result->execute(array(':vcode' => $vcode, ':userid' => $user['id']))) {
                   // XXXlog: User insertion failure!
                   $errors[] = _('Could not initiate reset request. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
                 else {
-                  $resetcode = $vcode.dechex($user['id'] + $session['id']).'_'.createTimeCode($session, null, 60);
+                  $resetcode = $vcode.dechex($user['id'] + $session['id']).'_'.AuthUtils::createTimeCode($session, null, 60);
                   // Send email with instructions for resetting the password.
                   $mail = new email();
                   $mail->setCharset('utf-8');
@@ -248,9 +248,9 @@ if (!count($errors)) {
             if ($row) {
               $tcode_session = $row;
               if (($regs[1] == $user['verify_hash']) &&
-                  verifyTimeCode($regs[3], $session, 60)) {
+                  AuthUtils::verifyTimeCode($regs[3], $session, 60)) {
                 // Set a new verify_hash for the actual password reset.
-                $user['verify_hash'] = createVerificationCode();
+                $user['verify_hash'] = AuthUtils::createVerificationCode();
                 $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
                 if (!$result->execute(array(':vcode' => $user['verify_hash'], ':userid' => $user['id']))) {
                   // XXXlog: Unexpected failure to reset verify_hash!
@@ -287,10 +287,10 @@ if (!count($errors)) {
             $errors[] = _('Password reset failed. The reset form you used was not valid. Possibly it has expired and you need to initiate the password reset again.');
           }
           // Check validity of time code.
-          if (!count($errors) && !verifyTimeCode($_POST['tcode'], $session)) {
+          if (!count($errors) && !AuthUtils::verifyTimeCode($_POST['tcode'], $session)) {
             $errors[] = _('Password reset failed. The reset form you used was not valid. Possibly it has expired and you need to initiate the password reset again.');
           }
-          $errors += checkPasswordConstraints(strval($_POST['pwd']), $user['email']);
+          $errors += AuthUtils::checkPasswordConstraints(strval($_POST['pwd']), $user['email']);
           if (!count($errors)) {
             $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
             $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash, `verify_hash` = \'\' WHERE `id` = :userid;');
@@ -308,7 +308,7 @@ if (!count($errors)) {
   }
   if (is_null($session)) {
     // Create new session and set cookie.
-    $sesskey = createSessionKey();
+    $sesskey = AuthUtils::createSessionKey();
     setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
     $result = $db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`) VALUES (:sesskey, :expire);');
     $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+5 minutes'))));
@@ -350,7 +350,7 @@ if (!count($errors)) {
     $inptxt->setAttribute('required', '');
     $inptxt->setAttribute('placeholder', _('Email'));
     $litem = $ulist->appendElement('li');
-    $litem->appendInputHidden('tcode', createTimeCode($session));
+    $litem->appendInputHidden('tcode', AuthUtils::createTimeCode($session));
     $submit = $litem->appendInputSubmit(_('Send instructions to email'));
   }
   elseif ($pagetype == 'resetpwd') {
@@ -373,7 +373,7 @@ if (!count($errors)) {
     $inptxt->setAttribute('class', 'login');
     $litem = $ulist->appendElement('li');
     $litem->appendInputHidden('reset', '');
-    $litem->appendInputHidden('tcode', createTimeCode($session));
+    $litem->appendInputHidden('tcode', AuthUtils::createTimeCode($session));
     if (!$session['logged_in'] && strlen(@$user['verify_hash'])) {
       $litem->appendInputHidden('vcode', $user['verify_hash']);
     }
@@ -429,7 +429,7 @@ if (!count($errors)) {
     $label->setAttribute('id', 'rememprompt');
     $label->setAttribute('class', 'loginprompt');
     $litem = $ulist->appendElement('li');
-    $litem->appendInputHidden('tcode', createTimeCode($session));
+    $litem->appendInputHidden('tcode', AuthUtils::createTimeCode($session));
     $submit = $litem->appendInputSubmit(_('Log in / Register'));
     $submit->setAttribute('class', 'loginbutton');
   }
@@ -449,60 +449,4 @@ if (count($errors)) {
 
 // Send HTML to client.
 print($document->saveHTML());
-
-// ********** helper functions **********
-
-function checkPasswordConstraints($new_password, $user_email) {
-  $errors = array();
-  if ($new_password != trim($new_password)) {
-    $errors[] = _('Password must not start or end with a whitespace character like a space.');
-  }
-  if (strlen($new_password) < 8) { $errors[] = sprintf(_('Password too short (min. %s characters).'), 8); }
-  if (strlen($new_password) > 70) { $errors[] = sprintf(_('Password too long (max. %s characters).'), 70); }
-  if ((strtolower($new_password) == strtolower($user_email)) ||
-      in_array(strtolower($new_password), preg_split("/[@\.]+/", strtolower($user_email)))) {
-    $errors[] = _('The passwort can not be equal to your email or any part of it.');
-  }
-  if ((strlen($new_password) < 15) && (preg_match('/^[a-zA-Z]+$/', $new_password))) {
-    $errors[] = sprintf(_('Your password must use characters other than normal letters or contain least %s characters.'), 15);
-  }
-  if (preg_match('/^\d+$/', $new_password)) {
-    $errors[] = sprintf(_('Your password cannot consist only of numbers.'), 15);
-  }
-  if (strlen(count_chars($new_password, 3)) < 5) {
-    $errors[] = sprintf(_('Password does have to contain at least %s different characters.'), 5);
-  }
-  return $errors;
-}
-
-function createSessionKey() {
-  return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
-}
-
-function createVerificationCode() {
-  return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
-}
-
-function createTimeCode($session, $offset = null, $validity_minutes = 10) {
-  // Matches TOTP algorithms, see https://en.wikipedia.org/wiki/Time-based_One-time_Password_Algorithm
-  $valid_seconds = intval($validity_minutes) * 60;
-  if ($valid_seconds < 60) { $valid_seconds = 60; }
-  $code_digits = 8;
-  $time = time();
-  $rest = is_null($offset)?($time % $valid_seconds):intval($offset); // T0, will be sent as part of code to make it valid for the full duration.
-  $counter = floor(($time - $rest) / $valid_seconds);
-  $hmac = mhash(MHASH_SHA1, $counter, $session['id'].$session['sesskey']);
-  $offset = hexdec(substr(bin2hex(substr($hmac, -1)), -1)); // Get the last 4 bits as a number.
-  $totp = hexdec(bin2hex(substr($hmac, $offset, 4))) & 0x7FFFFFFF; // Take 4 bytes at the offset, discard highest bit.
-  $totp_value = sprintf('%0'.$code_digits.'d', substr($totp, -$code_digits));
-  return $rest.'.'.$totp_value;
-}
-
-function verifyTimeCode($timecode_to_verify, $session, $validity_minutes = 10) {
-  if (preg_match('/^(\d+)\.\d+$/', $timecode_to_verify, $regs)) {
-    return ($timecode_to_verify === createTimeCode($session, $regs[1], $validity_minutes));
-  }
-  return false;
-}
-
 ?>

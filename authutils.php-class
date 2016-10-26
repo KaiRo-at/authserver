@@ -1,0 +1,81 @@
+<?php
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+class AuthUtils {
+  // KaiRo.at authentication utilities PHP class
+  // This class contains helper functions for the authentication system.
+  //
+  // static function checkPasswordConstraints($new_password, $user_email)
+  //   Check password constraints and return an array of error messages (empty if all constraints are met).
+  //
+  // static function createSessionKey()
+  //   Return a random session key.
+  //
+  // static function createVerificationCode()
+  //   Return a random acount/email verification code.
+  //
+  // static function createTimeCode($session, [$offset], [$validity_minutes])
+  //   Return a time-based code based on the key and ID of the given session.
+  //     An offset can be given to create a specific code for verification, otherwise and offset will be generated.
+  //     Also, an amount of minutes for the code to stay valid can be handed over, by default 10 minutes will be used.
+  //
+  // static function verifyTimeCode($timecode_to_verify, $session, [$validity_minutes])
+  //   Verify a given time-based code and return true if it's valid or false if it's not.
+  //     See createTimeCode() documentation for the session and validity paramerters.
+
+  static function checkPasswordConstraints($new_password, $user_email) {
+    $errors = array();
+    if ($new_password != trim($new_password)) {
+      $errors[] = _('Password must not start or end with a whitespace character like a space.');
+    }
+    if (strlen($new_password) < 8) { $errors[] = sprintf(_('Password too short (min. %s characters).'), 8); }
+    if (strlen($new_password) > 70) { $errors[] = sprintf(_('Password too long (max. %s characters).'), 70); }
+    if ((strtolower($new_password) == strtolower($user_email)) ||
+        in_array(strtolower($new_password), preg_split("/[@\.]+/", strtolower($user_email)))) {
+      $errors[] = _('The passwort can not be equal to your email or any part of it.');
+    }
+    if ((strlen($new_password) < 15) && (preg_match('/^[a-zA-Z]+$/', $new_password))) {
+      $errors[] = sprintf(_('Your password must use characters other than normal letters or contain least %s characters.'), 15);
+    }
+    if (preg_match('/^\d+$/', $new_password)) {
+      $errors[] = sprintf(_('Your password cannot consist only of numbers.'), 15);
+    }
+    if (strlen(count_chars($new_password, 3)) < 5) {
+      $errors[] = sprintf(_('Password does have to contain at least %s different characters.'), 5);
+    }
+    return $errors;
+  }
+
+  static function createSessionKey() {
+    return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
+  }
+
+  static function createVerificationCode() {
+    return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
+  }
+
+  static function createTimeCode($session, $offset = null, $validity_minutes = 10) {
+    // Matches TOTP algorithms, see https://en.wikipedia.org/wiki/Time-based_One-time_Password_Algorithm
+    $valid_seconds = intval($validity_minutes) * 60;
+    if ($valid_seconds < 60) { $valid_seconds = 60; }
+    $code_digits = 8;
+    $time = time();
+    $rest = is_null($offset)?($time % $valid_seconds):intval($offset); // T0, will be sent as part of code to make it valid for the full duration.
+    $counter = floor(($time - $rest) / $valid_seconds);
+    $hmac = mhash(MHASH_SHA1, $counter, $session['id'].$session['sesskey']);
+    $offset = hexdec(substr(bin2hex(substr($hmac, -1)), -1)); // Get the last 4 bits as a number.
+    $totp = hexdec(bin2hex(substr($hmac, $offset, 4))) & 0x7FFFFFFF; // Take 4 bytes at the offset, discard highest bit.
+    $totp_value = sprintf('%0'.$code_digits.'d', substr($totp, -$code_digits));
+    return $rest.'.'.$totp_value;
+  }
+
+  static function verifyTimeCode($timecode_to_verify, $session, $validity_minutes = 10) {
+    if (preg_match('/^(\d+)\.\d+$/', $timecode_to_verify, $regs)) {
+      return ($timecode_to_verify === AuthUtils::createTimeCode($session, $regs[1], $validity_minutes));
+    }
+    return false;
+  }
+}
+?>

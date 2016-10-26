@@ -59,12 +59,12 @@ if (!count($errors)) {
           $user = $result->fetch(PDO::FETCH_ASSOC);
           if ($user['id'] && array_key_exists('pwd', $_POST)) {
             // existing user, check password
-            if (($user['status'] == 'ok') && password_verify(@$_POST['pwd'], $user['pwdhash'])) {
+            if (($user['status'] == 'ok') && AuthUtils::pwdVerify(@$_POST['pwd'], $user)) {
               // Check if a newer hashing algorithm is available
               // or the cost has changed
-              if (password_needs_rehash($user['pwdhash'], PASSWORD_DEFAULT, $pwd_options)) {
+              if (AuthUtils::pwdNeedsRehash($user)) {
                 // If so, create a new hash, and replace the old one
-                $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
+                $newHash = AuthUtils::pwdHash($_POST['pwd']);
                 $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash WHERE `id` = :userid;');
                 if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $user['id']))) {
                   // XXXlog: Failed to update user hash!
@@ -120,7 +120,7 @@ if (!count($errors)) {
             if (!count($errors)) {
               // Put user into the DB
               if (!$user['id']) {
-                $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
+                $newHash = AuthUtils::pwdHash($_POST['pwd']);
                 $vcode = AuthUtils::createVerificationCode();
                 $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
                 if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
@@ -292,7 +292,7 @@ if (!count($errors)) {
           }
           $errors += AuthUtils::checkPasswordConstraints(strval($_POST['pwd']), $user['email']);
           if (!count($errors)) {
-            $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
+            $newHash = AuthUtils::pwdHash($_POST['pwd']);
             $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash, `verify_hash` = \'\' WHERE `id` = :userid;');
             if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $session['user']))) {
               // XXXlog: Password reset failure!

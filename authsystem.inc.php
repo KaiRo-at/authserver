@@ -10,8 +10,6 @@ ini_set('display_errors', 1); error_reporting(E_ALL);
 $dbdata = json_decode(file_get_contents('/etc/kairo/auth_db.json'), true);
 if (!is_array($dbdata)) { trigger_error('DB configuration not found', E_USER_ERROR); }
 
-$pwd_options = array('cost' => 10);
-
 // Extended DOM document class
 require_once('../kairo/include/cbsm/util/document.php-class');
 // Class for sending emails

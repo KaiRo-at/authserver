@@ -7,39 +7,56 @@ class AuthUtils {
   // KaiRo.at authentication utilities PHP class
   // This class contains helper functions for the authentication system.
   //
-  // private static $pwd_cost
-  //   Store cost parameter for use with PHP password_hash function.
+  // function __construct()
+  //   CONSTRUCTOR
   //
-  // static function checkPasswordConstraints($new_password, $user_email)
+  // private $pwd_cost
+  //   The cost parameter for use with PHP password_hash function.
+  //
+  // private $pwd_nonces
+  //   The array of nonces to use for "peppering" passwords. For new hashes, the last one of those will be used.
+  //
+  // function checkPasswordConstraints($new_password, $user_email)
   //   Check password constraints and return an array of error messages (empty if all constraints are met).
   //
-  // static function createSessionKey()
+  // function createSessionKey()
   //   Return a random session key.
   //
-  // static function createVerificationCode()
+  // function createVerificationCode()
   //   Return a random acount/email verification code.
   //
-  // static function createTimeCode($session, [$offset], [$validity_minutes])
+  // function createTimeCode($session, [$offset], [$validity_minutes])
   //   Return a time-based code based on the key and ID of the given session.
   //     An offset can be given to create a specific code for verification, otherwise and offset will be generated.
   //     Also, an amount of minutes for the code to stay valid can be handed over, by default 10 minutes will be used.
   //
-  // static function verifyTimeCode($timecode_to_verify, $session, [$validity_minutes])
+  // function verifyTimeCode($timecode_to_verify, $session, [$validity_minutes])
   //   Verify a given time-based code and return true if it's valid or false if it's not.
   //     See createTimeCode() documentation for the session and validity paramerters.
   //
-  // static function pwdHash($new_password)
+  // function pwdHash($new_password)
   //   Return a hash for the given password.
   //
-  // static function pwdVerify($password_to_verify, $user)
+  // function pwdVerify($password_to_verify, $user)
   //   Return true if the password verifies against the pwdhash field of the user, false if not.
   //
-  // static function pwdNeedsRehash($user)
+  // function pwdNeedsRehash($user)
   //   Return true if the pwdhash field of the user uses an outdated standard and needs to be rehashed.
 
-  private static $pwd_cost = 10;
+  function __construct($settings) {
+    // *** constructor ***
+    if (array_key_exists('pwd_nonces', $settings)) {
+      $this->pwd_nonces = $settings['pwd_nonces'];
+    }
+    if (array_key_exists('pwd_cost', $settings)) {
+      $this->pwd_cost = $settings['pwd_cost'];
+    }
+  }
 
-  static function checkPasswordConstraints($new_password, $user_email) {
+  private $pwd_cost = 10;
+  private $pwd_nonces = array();
+
+  function checkPasswordConstraints($new_password, $user_email) {
     $errors = array();
     if ($new_password != trim($new_password)) {
       $errors[] = _('Password must not start or end with a whitespace character like a space.');
@@ -62,15 +79,15 @@ class AuthUtils {
     return $errors;
   }
 
-  static function createSessionKey() {
+  function createSessionKey() {
     return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
   }
 
-  static function createVerificationCode() {
+  function createVerificationCode() {
     return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
   }
 
-  static function createTimeCode($session, $offset = null, $validity_minutes = 10) {
+  function createTimeCode($session, $offset = null, $validity_minutes = 10) {
     // Matches TOTP algorithms, see https://en.wikipedia.org/wiki/Time-based_One-time_Password_Algorithm
     $valid_seconds = intval($validity_minutes) * 60;
     if ($valid_seconds < 60) { $valid_seconds = 60; }
@@ -85,23 +102,42 @@ class AuthUtils {
     return $rest.'.'.$totp_value;
   }
 
-  static function verifyTimeCode($timecode_to_verify, $session, $validity_minutes = 10) {
+  function verifyTimeCode($timecode_to_verify, $session, $validity_minutes = 10) {
     if (preg_match('/^(\d+)\.\d+$/', $timecode_to_verify, $regs)) {
-      return ($timecode_to_verify === self::createTimeCode($session, $regs[1], $validity_minutes));
+      return ($timecode_to_verify === $this->createTimeCode($session, $regs[1], $validity_minutes));
     }
     return false;
   }
 
-  static function pwdHash($new_password) {
-    return password_hash($new_password, PASSWORD_DEFAULT, array('cost' => self::$pwd_cost));
+  function pwdHash($new_password) {
+    $hash_prefix = '';
+    if (count($this->pwd_nonces)) {
+      $new_password .= $this->pwd_nonces[count($this->pwd_nonces) - 1];
+      $hash_prefix = (count($this->pwd_nonces) - 1).'|';
+    }
+    return $hash_prefix.password_hash($new_password, PASSWORD_DEFAULT, array('cost' => $this->pwd_cost));
   }
 
-  static function pwdVerify($password_to_verify, $userdata) {
-    return password_verify($password_to_verify, $userdata['pwdhash']));
+  function pwdVerify($password_to_verify, $userdata) {
+    if (preg_match('/^(\d+)\|/', $userdata['pwdhash'], $regs)) {
+      $password_to_verify .= $this->pwd_nonces[$regs[1]];
+    }
+    return password_verify($password_to_verify, $userdata['pwdhash']);
   }
 
-  static function pwdNeedsRehash($userdata) {
-    return password_needs_rehash($userdata['pwdhash'], PASSWORD_DEFAULT, array('cost' => self::$pwd_cost));
+  function pwdNeedsRehash($userdata) {
+    $nonceid = -1;
+    $pwdhash = $userdata['pwdhash'];
+    if (preg_match('/^(\d+)\|(.+)$/', $userdata['pwdhash'], $regs)) {
+      $nonceid = $regs[1];
+      $pwdhash = $regs[2];
+    }
+    if ($nonceid == count($this->pwd_nonces) - 1) {
+      return password_needs_rehash($pwdhash, PASSWORD_DEFAULT, array('cost' => $this->pwd_cost));
+    }
+    else {
+      return true;
+    }
   }
 }
 ?>

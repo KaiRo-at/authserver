@@ -53,18 +53,18 @@ if (!count($errors)) {
         if (!preg_match('/^[^@]+@[^@]+\.[^@]+$/', $_POST['email'])) {
           $errors[] = _('The email address is invalid.');
         }
-        elseif (AuthUtils::verifyTimeCode(@$_POST['tcode'], $session)) {
+        elseif ($utils->verifyTimeCode(@$_POST['tcode'], $session)) {
           $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash` FROM `auth_users` WHERE `email` = :email;');
           $result->execute(array(':email' => $_POST['email']));
           $user = $result->fetch(PDO::FETCH_ASSOC);
           if ($user['id'] && array_key_exists('pwd', $_POST)) {
             // existing user, check password
-            if (($user['status'] == 'ok') && AuthUtils::pwdVerify(@$_POST['pwd'], $user)) {
+            if (($user['status'] == 'ok') && $utils->pwdVerify(@$_POST['pwd'], $user)) {
               // Check if a newer hashing algorithm is available
               // or the cost has changed
-              if (AuthUtils::pwdNeedsRehash($user)) {
+              if ($utils->pwdNeedsRehash($user)) {
                 // If so, create a new hash, and replace the old one
-                $newHash = AuthUtils::pwdHash($_POST['pwd']);
+                $newHash = $utils->pwdHash($_POST['pwd']);
                 $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash WHERE `id` = :userid;');
                 if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $user['id']))) {
                   // XXXlog: Failed to update user hash!
@@ -72,7 +72,7 @@ if (!count($errors)) {
               }
 
               // Log user in - update session key for that, see https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines#Login
-              $sesskey = AuthUtils::createSessionKey();
+              $sesskey = $utils->createSessionKey();
               setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
               // If the session has a user set, create a new one - otherwise take existing session entry.
               if (intval($session['user'])) {
@@ -115,13 +115,13 @@ if (!count($errors)) {
           else {
             // new user: check password, create user and send verification; existing users: re-send verification or send password change instructions
             if (array_key_exists('pwd', $_POST)) {
-              $errors += AuthUtils::checkPasswordConstraints(strval($_POST['pwd']), $_POST['email']);
+              $errors += $utils->checkPasswordConstraints(strval($_POST['pwd']), $_POST['email']);
             }
             if (!count($errors)) {
               // Put user into the DB
               if (!$user['id']) {
-                $newHash = AuthUtils::pwdHash($_POST['pwd']);
-                $vcode = AuthUtils::createVerificationCode();
+                $newHash = $utils->pwdHash($_POST['pwd']);
+                $vcode = $utils->createVerificationCode();
                 $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
                 if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
                   // XXXlog: User insertion failure!
@@ -162,14 +162,14 @@ if (!count($errors)) {
               }
               else {
                 // Password reset requested with "Password forgotten?" function.
-                $vcode = AuthUtils::createVerificationCode();
+                $vcode = $utils->createVerificationCode();
                 $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
                 if (!$result->execute(array(':vcode' => $vcode, ':userid' => $user['id']))) {
                   // XXXlog: User insertion failure!
                   $errors[] = _('Could not initiate reset request. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
                 else {
-                  $resetcode = $vcode.dechex($user['id'] + $session['id']).'_'.AuthUtils::createTimeCode($session, null, 60);
+                  $resetcode = $vcode.dechex($user['id'] + $session['id']).'_'.$utils->createTimeCode($session, null, 60);
                   // Send email with instructions for resetting the password.
                   $mail = new email();
                   $mail->setCharset('utf-8');
@@ -248,9 +248,9 @@ if (!count($errors)) {
             if ($row) {
               $tcode_session = $row;
               if (($regs[1] == $user['verify_hash']) &&
-                  AuthUtils::verifyTimeCode($regs[3], $session, 60)) {
+                  $utils->verifyTimeCode($regs[3], $session, 60)) {
                 // Set a new verify_hash for the actual password reset.
-                $user['verify_hash'] = AuthUtils::createVerificationCode();
+                $user['verify_hash'] = $utils->createVerificationCode();
                 $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
                 if (!$result->execute(array(':vcode' => $user['verify_hash'], ':userid' => $user['id']))) {
                   // XXXlog: Unexpected failure to reset verify_hash!
@@ -287,12 +287,12 @@ if (!count($errors)) {
             $errors[] = _('Password reset failed. The reset form you used was not valid. Possibly it has expired and you need to initiate the password reset again.');
           }
           // Check validity of time code.
-          if (!count($errors) && !AuthUtils::verifyTimeCode($_POST['tcode'], $session)) {
+          if (!count($errors) && !$utils->verifyTimeCode($_POST['tcode'], $session)) {
             $errors[] = _('Password reset failed. The reset form you used was not valid. Possibly it has expired and you need to initiate the password reset again.');
           }
-          $errors += AuthUtils::checkPasswordConstraints(strval($_POST['pwd']), $user['email']);
+          $errors += $utils->checkPasswordConstraints(strval($_POST['pwd']), $user['email']);
           if (!count($errors)) {
-            $newHash = AuthUtils::pwdHash($_POST['pwd']);
+            $newHash = $utils->pwdHash($_POST['pwd']);
             $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash, `verify_hash` = \'\' WHERE `id` = :userid;');
             if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $session['user']))) {
               // XXXlog: Password reset failure!
@@ -308,7 +308,7 @@ if (!count($errors)) {
   }
   if (is_null($session)) {
     // Create new session and set cookie.
-    $sesskey = AuthUtils::createSessionKey();
+    $sesskey = $utils->createSessionKey();
     setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
     $result = $db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`) VALUES (:sesskey, :expire);');
     $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+5 minutes'))));
@@ -350,7 +350,7 @@ if (!count($errors)) {
     $inptxt->setAttribute('required', '');
     $inptxt->setAttribute('placeholder', _('Email'));
     $litem = $ulist->appendElement('li');
-    $litem->appendInputHidden('tcode', AuthUtils::createTimeCode($session));
+    $litem->appendInputHidden('tcode', $utils->createTimeCode($session));
     $submit = $litem->appendInputSubmit(_('Send instructions to email'));
   }
   elseif ($pagetype == 'resetpwd') {
@@ -373,7 +373,7 @@ if (!count($errors)) {
     $inptxt->setAttribute('class', 'login');
     $litem = $ulist->appendElement('li');
     $litem->appendInputHidden('reset', '');
-    $litem->appendInputHidden('tcode', AuthUtils::createTimeCode($session));
+    $litem->appendInputHidden('tcode', $utils->createTimeCode($session));
     if (!$session['logged_in'] && strlen(@$user['verify_hash'])) {
       $litem->appendInputHidden('vcode', $user['verify_hash']);
     }
@@ -429,7 +429,7 @@ if (!count($errors)) {
     $label->setAttribute('id', 'rememprompt');
     $label->setAttribute('class', 'loginprompt');
     $litem = $ulist->appendElement('li');
-    $litem->appendInputHidden('tcode', AuthUtils::createTimeCode($session));
+    $litem->appendInputHidden('tcode', $utils->createTimeCode($session));
     $submit = $litem->appendInputSubmit(_('Log in / Register'));
     $submit->setAttribute('class', 'loginbutton');
   }

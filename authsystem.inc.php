@@ -16,6 +16,7 @@ require_once('../kairo/include/cbsm/util/document.php-class');
 require_once('../kairo/include/classes/email.php-class');
 // Class for sending emails
 require_once(__DIR__.'/authutils.php-class');
+$utils = new AuthUtils(array());
 
 bindtextdomain('kairo_auth', 'en'); // XXX: Should negotiate locale.
 bind_textdomain_codeset('kairo_auth', 'utf-8');

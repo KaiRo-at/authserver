@@ -53,7 +53,7 @@ if (!count($errors)) {
         if (!preg_match('/^[^@]+@[^@]+\.[^@]+$/', $_POST['email'])) {
           $errors[] = _('The email address is invalid.');
         }
-        else {
+        elseif (verifyTimeCode(@$_POST['tcode'], $session)) {
           $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash` FROM `auth_users` WHERE `email` = :email;');
           $result->execute(array(':email' => $_POST['email']));
           $user = $result->fetch(PDO::FETCH_ASSOC);
@@ -72,7 +72,7 @@ if (!count($errors)) {
               }
 
               // Log user in - update session key for that, see https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines#Login
-              $sesskey = bin2hex(openssl_random_pseudo_bytes(512/8)); // Get 512 bits of randomness (128 byte hex string).
+              $sesskey = createSessionKey();
               setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
               // If the session has a user set, create a new one - otherwise take existing session entry.
               if (intval($session['user'])) {
@@ -86,7 +86,7 @@ if (!count($errors)) {
                   $session = $row;
                 }
                 else {
-                  // XXXlog: unexpected failure to create session!
+                  // XXXlog: Unexpected failure to create session!
                   $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
               }
@@ -95,6 +95,16 @@ if (!count($errors)) {
                 if (!$result->execute(array(':sesskey' => $sesskey, ':userid' => $user['id'], ':expire' => gmdate('Y-m-d H:i:s', strtotime('+1 day')), ':sessid' => $session['id']))) {
                   // XXXlog: Unexpected login failure!
                   $errors[] = _('Login failed unexpectedly. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+                }
+              }
+              // If a verify_hash if set on a verified user, a password reset had been requested. As a login works right now, cancel that reset request by deleting the hash.
+              if (strlen(@$user['verify_hash'])) {
+                $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = \'\' WHERE `id` = :userid;');
+                if (!$result->execute(array(':userid' => $user['id']))) {
+                  // XXXlog: verify_hash could not be emptied!
+                }
+                else {
+                  $user['verify_hash'] = '';
                 }
               }
             }
@@ -111,7 +121,7 @@ if (!count($errors)) {
               // Put user into the DB
               if (!$user['id']) {
                 $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
-                $vcode = bin2hex(openssl_random_pseudo_bytes(512/8)); // Get 512 bits of randomness (128 byte hex string).
+                $vcode = createVerificationCode();
                 $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
                 if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
                   // XXXlog: User insertion failure!
@@ -151,10 +161,45 @@ if (!count($errors)) {
                 }
               }
               else {
-                // Send email with instructions for resetting the password.
+                // Password reset requested with "Password forgotten?" function.
+                $vcode = createVerificationCode();
+                $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
+                if (!$result->execute(array(':vcode' => $vcode, ':userid' => $user['id']))) {
+                  // XXXlog: User insertion failure!
+                  $errors[] = _('Could not initiate reset request. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+                }
+                else {
+                  $resetcode = $vcode.dechex($user['id'] + $session['id']).'_'.createTimeCode($session, null, 60);
+                  // Send email with instructions for resetting the password.
+                  $mail = new email();
+                  $mail->setCharset('utf-8');
+                  $mail->addHeader('X-KAIRO-AUTH', 'password_reset');
+                  $mail->addRecipient($user['email']);
+                  $mail->setSender('noreply@auth.kairo.at', _('KaiRo.at Authentication Service'));
+                  $mail->setSubject('How to reset your password for KaiRo.at Authentication');
+                  $mail->addMailText(_('Hi,')."\n\n");
+                  $mail->addMailText(sprintf(_('A request for setting a new password for this email address, %s, has been submitted on "%s".'),
+                                            $user['email'], _('KaiRo.at Authentication Service'))."\n\n");
+                  $mail->addMailText(_('You can set a new password by clicking the following link (or calling it up in your browser):')."\n");
+                  $mail->addMailText(($running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'].strstr($_SERVER['REQUEST_URI'], '?', true)
+                                    .'?email='.rawurlencode($user['email']).'&reset_code='.rawurlencode($resetcode)."\n\n");
+                  $mail->addMailText(_('If you do not call this confirmation link within 1 hour, this link expires and the existing password is being kept in place.')."\n\n");
+                  $mail->addMailText(sprintf(_('The %s team'), 'KaiRo.at'));
+                  //$mail->setDebugAddress("robert@localhost");
+                  $mailsent = $mail->send();
+                  if ($mailsent) {
+                    $pagetype = 'resetmail_sent';
+                  }
+                  else {
+                    $errors[] = _('The email with password reset instructions could not be sent to you. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+                  }
+                }
               }
             }
           }
+        }
+        else {
+          $errors[] = _('The form you used was not valid. Possibly it has expired and you need to initiate the action again.');
         }
       }
       elseif (array_key_exists('reset', $_GET)) {
@@ -163,7 +208,7 @@ if (!count($errors)) {
           $result->execute(array(':userid' => $session['user']));
           $user = $result->fetch(PDO::FETCH_ASSOC);
           if (!$user['id']) {
-            // XXXlog: unexpected failure to fetch user data!
+            // XXXlog: Unexpected failure to fetch user data!
           }
           $pagetype = 'resetpwd';
         }
@@ -179,7 +224,7 @@ if (!count($errors)) {
         if ($user['id']) {
           $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = \'\', `status` = \'ok\' WHERE `id` = :userid;');
           if (!$result->execute(array(':userid' => $user['id']))) {
-            // XXXlog: unexpected failure to save verification!
+            // XXXlog: Unexpected failure to save verification!
             $errors[] = _('Could not save confirmation. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
           }
           $pagetype = 'verification_done';
@@ -188,25 +233,73 @@ if (!count($errors)) {
           $errors[] = _('The confirmation link you called is not valid. Possibly it has expired and you need to try registering again.');
         }
       }
+      elseif (array_key_exists('reset_code', $_GET)) {
+        $reset_fail = true;
+        $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `email` = :email');
+        $result->execute(array(':email' => @$_GET['email']));
+        $user = $result->fetch(PDO::FETCH_ASSOC);
+        if ($user['id']) {
+          // Deconstruct reset code and verify it.
+          if (preg_match('/^([0-9a-f]{'.strlen($user['verify_hash']).'})([0-9a-f]+)_(\d+\.\d+)$/', $_GET['reset_code'], $regs)) {
+            $tcode_sessid = hexdec($regs[2]) - $user['id'];
+            $result = $db->prepare('SELECT `id`,`sesskey` FROM `auth_sessions` WHERE `id` = :sessid;');
+            $result->execute(array(':sessid' => $tcode_sessid));
+            $row = $result->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+              $tcode_session = $row;
+              if (($regs[1] == $user['verify_hash']) &&
+                  verifyTimeCode($regs[3], $session, 60)) {
+                // Set a new verify_hash for the actual password reset.
+                $user['verify_hash'] = createVerificationCode();
+                $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
+                if (!$result->execute(array(':vcode' => $user['verify_hash'], ':userid' => $user['id']))) {
+                  // XXXlog: Unexpected failure to reset verify_hash!
+                }
+                $result = $db->prepare('UPDATE `auth_sessions` SET `user` = :userid WHERE `id` = :sessid;');
+                if (!$result->execute(array(':userid' => $user['id'], ':sessid' => $session['id']))) {
+                  // XXXlog: Unexpected failure to update session!
+                }
+                $pagetype = 'resetpwd';
+                $reset_fail = false;
+              }
+            }
+          }
+        }
+        if ($reset_fail) {
+          $errors[] = _('The password reset link you called is not valid. Possibly it has expired and you need to call the "Password forgotten?" function again.');
+        }
+      }
       elseif (intval($session['user'])) {
-        $result = $db->prepare('SELECT `id`,`email` FROM `auth_users` WHERE `id` = :userid;');
+        $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `id` = :userid;');
         $result->execute(array(':userid' => $session['user']));
         $user = $result->fetch(PDO::FETCH_ASSOC);
         if (!$user['id']) {
-          // XXXlog: unexpected failure to fetch user data!
+          // XXXlog: Unexpected failure to fetch user data!
         }
         // Password reset requested.
         if (array_key_exists('pwd', $_POST) && array_key_exists('reset', $_POST) && array_key_exists('tcode', $_POST)) {
+          // If not logged in, a password reset needs to have the proper vcode set.
+          if (!$session['logged_in'] && (!strlen(@$_POST['vcode']) || ($_POST['vcode'] != $user['verify_hash']))) {
+            $errors[] = _('Password reset failed. The reset form you used was not valid. Possibly it has expired and you need to initiate the password reset again.');
+          }
+          // If not logged in, a password reset also needs to have the proper email set.
+          if (!$session['logged_in'] && !count($errors) && (@$_POST['email_hidden'] != $user['email'])) {
+            $errors[] = _('Password reset failed. The reset form you used was not valid. Possibly it has expired and you need to initiate the password reset again.');
+          }
+          // Check validity of time code.
+          if (!count($errors) && !verifyTimeCode($_POST['tcode'], $session)) {
+            $errors[] = _('Password reset failed. The reset form you used was not valid. Possibly it has expired and you need to initiate the password reset again.');
+          }
           $errors += checkPasswordConstraints(strval($_POST['pwd']), $user['email']);
           if (!count($errors)) {
             $newHash = password_hash($_POST['pwd'], PASSWORD_DEFAULT, $pwd_options);
-            $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash WHERE `id` = :userid;');
+            $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash, `verify_hash` = \'\' WHERE `id` = :userid;');
             if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $session['user']))) {
               // XXXlog: Password reset failure!
               $errors[] = _('Password reset failed. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
             }
             else {
-              $pagetype = 'pwd_reset_done';
+              $pagetype = 'reset_done';
             }
           }
         }
@@ -215,7 +308,7 @@ if (!count($errors)) {
   }
   if (is_null($session)) {
     // Create new session and set cookie.
-    $sesskey = bin2hex(openssl_random_pseudo_bytes(512/8)); // Get 512 bits of randomness (128 byte hex string).
+    $sesskey = createSessionKey();
     setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
     $result = $db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`) VALUES (:sesskey, :expire);');
     $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+5 minutes'))));
@@ -227,7 +320,7 @@ if (!count($errors)) {
       $session = $row;
     }
     else {
-      // XXXlog: unexpected failure to create session!
+      // XXXlog: Unexpected failure to create session!
       $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
     }
   }
@@ -237,6 +330,11 @@ if (!count($errors)) {
   if ($pagetype == 'verification_sent') {
     $para = $body->appendElement('p', sprintf(_('An email for confirmation has been sent to %s. Please follow the link provided there to complete the process.'), $user['email']));
     $para->setAttribute('class', 'verifyinfo pending');
+  }
+  elseif ($pagetype == 'resetmail_sent') {
+    $para = $body->appendElement('p',
+        _('An email has been sent to the requested account with further information. If you do not receive an email then please confirm you have entered the same email address used during account registration.'));
+    $para->setAttribute('class', 'resetinfo pending');
   }
   elseif ($pagetype == 'resetstart') {
     $para = $body->appendElement('p', _('If you forgot your password or didn\'t receive the registration confirmation, please enter your email here.'));
@@ -256,7 +354,7 @@ if (!count($errors)) {
     $submit = $litem->appendInputSubmit(_('Send instructions to email'));
   }
   elseif ($pagetype == 'resetpwd') {
-    $para = $body->appendElement('p', _('You can set a new password here.'));
+    $para = $body->appendElement('p', sprintf(_('You can set a new password for %s here.'), $user['email']));
     $para->setAttribute('class', '');
     $form = $body->appendForm('?', 'POST', 'newpwdform');
     $form->setAttribute('id', 'loginform');
@@ -276,6 +374,9 @@ if (!count($errors)) {
     $litem = $ulist->appendElement('li');
     $litem->appendInputHidden('reset', '');
     $litem->appendInputHidden('tcode', createTimeCode($session));
+    if (!$session['logged_in'] && strlen(@$user['verify_hash'])) {
+      $litem->appendInputHidden('vcode', $user['verify_hash']);
+    }
     $submit = $litem->appendInputSubmit(_('Save password'));
   }
   elseif ($session['logged_in']) {
@@ -374,17 +475,34 @@ function checkPasswordConstraints($new_password, $user_email) {
   return $errors;
 }
 
-function createTimeCode($session) {
+function createSessionKey() {
+  return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
+}
+
+function createVerificationCode() {
+  return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
+}
+
+function createTimeCode($session, $offset = null, $validity_minutes = 10) {
   // Matches TOTP algorithms, see https://en.wikipedia.org/wiki/Time-based_One-time_Password_Algorithm
-  $valid_seconds = 600; $code_digits = 8;
+  $valid_seconds = intval($validity_minutes) * 60;
+  if ($valid_seconds < 60) { $valid_seconds = 60; }
+  $code_digits = 8;
   $time = time();
-  $rest = $time % $valid_seconds; // T0, will be sent as part of code to make it valid for the full duration.
+  $rest = is_null($offset)?($time % $valid_seconds):intval($offset); // T0, will be sent as part of code to make it valid for the full duration.
   $counter = floor(($time - $rest) / $valid_seconds);
-  $hmac = mhash(MHASH_SHA1, $counter, $session['sesskey']);
+  $hmac = mhash(MHASH_SHA1, $counter, $session['id'].$session['sesskey']);
   $offset = hexdec(substr(bin2hex(substr($hmac, -1)), -1)); // Get the last 4 bits as a number.
   $totp = hexdec(bin2hex(substr($hmac, $offset, 4))) & 0x7FFFFFFF; // Take 4 bytes at the offset, discard highest bit.
   $totp_value = sprintf('%0'.$code_digits.'d', substr($totp, -$code_digits));
   return $rest.'.'.$totp_value;
+}
+
+function verifyTimeCode($timecode_to_verify, $session, $validity_minutes = 10) {
+  if (preg_match('/^(\d+)\.\d+$/', $timecode_to_verify, $regs)) {
+    return ($timecode_to_verify === createTimeCode($session, $regs[1], $validity_minutes));
+  }
+  return false;
 }
 
 ?>

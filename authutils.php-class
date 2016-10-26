@@ -15,6 +15,7 @@ class AuthUtils {
   //
   // private $pwd_nonces
   //   The array of nonces to use for "peppering" passwords. For new hashes, the last one of those will be used.
+  //     Generate a nonce with this command: |openssl rand -base64 48|
   //
   // function checkPasswordConstraints($new_password, $user_email)
   //   Check password constraints and return an array of error messages (empty if all constraints are met).
@@ -119,10 +120,12 @@ class AuthUtils {
   }
 
   function pwdVerify($password_to_verify, $userdata) {
-    if (preg_match('/^(\d+)\|/', $userdata['pwdhash'], $regs)) {
+    $pwdhash = $userdata['pwdhash'];
+    if (preg_match('/^(\d+)\|(.+)$/', $userdata['pwdhash'], $regs)) {
       $password_to_verify .= $this->pwd_nonces[$regs[1]];
+      $pwdhash = $regs[2];
     }
-    return password_verify($password_to_verify, $userdata['pwdhash']);
+    return password_verify($password_to_verify, $pwdhash);
   }
 
   function pwdNeedsRehash($userdata) {

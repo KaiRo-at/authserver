@@ -7,8 +7,13 @@ class AuthUtils {
   // KaiRo.at authentication utilities PHP class
   // This class contains helper functions for the authentication system.
   //
-  // function __construct()
+  // function __construct($settings, $db)
   //   CONSTRUCTOR
+  //   Settings are an associative array with a numeric pwd_cost field and an array pwd_nonces field.
+  //   The DB is a PDO object.
+  //
+  // public $db
+  //   A PDO database object for interaction.
   //
   // private $pwd_cost
   //   The cost parameter for use with PHP password_hash function.
@@ -16,6 +21,9 @@ class AuthUtils {
   // private $pwd_nonces
   //   The array of nonces to use for "peppering" passwords. For new hashes, the last one of those will be used.
   //     Generate a nonce with this command: |openssl rand -base64 48|
+  //
+  // function log($code, $additional_info)
+  //   Log an entry for admin purposes, with a code and some additional info.
   //
   // function checkPasswordConstraints($new_password, $user_email)
   //   Check password constraints and return an array of error messages (empty if all constraints are met).
@@ -44,18 +52,27 @@ class AuthUtils {
   // function pwdNeedsRehash($user)
   //   Return true if the pwdhash field of the user uses an outdated standard and needs to be rehashed.
 
-  function __construct($settings) {
+  function __construct($settings, $db) {
     // *** constructor ***
-    if (array_key_exists('pwd_nonces', $settings)) {
-      $this->pwd_nonces = $settings['pwd_nonces'];
-    }
+    $this->db = $db;
     if (array_key_exists('pwd_cost', $settings)) {
       $this->pwd_cost = $settings['pwd_cost'];
     }
+    if (array_key_exists('pwd_nonces', $settings)) {
+      $this->pwd_nonces = $settings['pwd_nonces'];
+    }
   }
 
+  public $db = null;
   private $pwd_cost = 10;
   private $pwd_nonces = array();
+
+  function log($code, $info) {
+    $result = $this->db->prepare('INSERT INTO `auth_log` (`code`, `info`, `ip_addr`) VALUES (:code, :info, :ipaddr);');
+    if (!$result->execute(array(':code' => $code, ':info' => $info, ':ipaddr' => $_SERVER['REMOTE_ADDR']))) {
+      // print($result->errorInfo()[2]);
+    }
+  }
 
   function checkPasswordConstraints($new_password, $user_email) {
     $errors = array();

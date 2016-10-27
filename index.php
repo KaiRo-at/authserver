@@ -44,7 +44,7 @@ if (!count($errors)) {
       if (array_key_exists('logout', $_GET)) {
         $result = $db->prepare('UPDATE `auth_sessions` SET `logged_in` = FALSE WHERE `id` = :sessid;');
         if (!$result->execute(array(':sessid' => $session['id']))) {
-          // XXXlog: Unexpected logout failure!
+          $utils->log('logout_failure', 'session: '.$session['id']);
           $errors[] = _('The email address is invalid.');
         }
         $session['logged_in'] = 0;
@@ -67,11 +67,15 @@ if (!count($errors)) {
                 $newHash = $utils->pwdHash($_POST['pwd']);
                 $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash WHERE `id` = :userid;');
                 if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $user['id']))) {
-                  // XXXlog: Failed to update user hash!
+                  $utils->log('user_hash_save_failure', 'user: '.$user['id']);
+                }
+                else {
+                  $utils->log('pwd_rehash_success', 'user: '.$user['id']);
                 }
               }
 
               // Log user in - update session key for that, see https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines#Login
+              $utils->log('login', 'user: '.$user['id']);
               $sesskey = $utils->createSessionKey();
               setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
               // If the session has a user set, create a new one - otherwise take existing session entry.
@@ -86,14 +90,14 @@ if (!count($errors)) {
                   $session = $row;
                 }
                 else {
-                  // XXXlog: Unexpected failure to create session!
+                  $utils->log('create_session_failure', 'at login, prev session: '.$session['id'].', new user: '.$user['id']);
                   $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
               }
               else {
                 $result = $db->prepare('UPDATE `auth_sessions` SET `sesskey` = :sesskey, `user` = :userid, `logged_in` = TRUE, `time_expire` = :expire WHERE `id` = :sessid;');
                 if (!$result->execute(array(':sesskey' => $sesskey, ':userid' => $user['id'], ':expire' => gmdate('Y-m-d H:i:s', strtotime('+1 day')), ':sessid' => $session['id']))) {
-                  // XXXlog: Unexpected login failure!
+                  $utils->log('login_failure', 'session: '.$session['id'].', user: '.$user['id']);
                   $errors[] = _('Login failed unexpectedly. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
               }
@@ -101,7 +105,7 @@ if (!count($errors)) {
               if (strlen(@$user['verify_hash'])) {
                 $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = \'\' WHERE `id` = :userid;');
                 if (!$result->execute(array(':userid' => $user['id']))) {
-                  // XXXlog: verify_hash could not be emptied!
+                  $utils->log('empty_vhash_failure', 'user: '.$user['id']);
                 }
                 else {
                   $user['verify_hash'] = '';
@@ -124,7 +128,7 @@ if (!count($errors)) {
                 $vcode = $utils->createVerificationCode();
                 $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
                 if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
-                  // XXXlog: User insertion failure!
+                  $utils->log('user_insert_failure', 'email: '.$_POST['email']);
                   $errors[] = _('Could not add user. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
                 $user = array('id' => $db->lastInsertId(),
@@ -132,6 +136,7 @@ if (!count($errors)) {
                               'pwdhash' => $newHash,
                               'status' => 'unverified',
                               'verify_hash' => $vcode);
+                $utils->log('new_user', 'user: '.$user['id'].', email: '.$user['email']);
               }
               if ($user['status'] == 'unverified') {
                 // Send email for verification and show message to point to it.
@@ -157,6 +162,7 @@ if (!count($errors)) {
                   $pagetype = 'verification_sent';
                 }
                 else {
+                  $utils->log('verify_mail_failure', 'user: '.$user['id'].', email: '.$user['email']);
                   $errors[] = _('The confirmation email could not be sent to you. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
               }
@@ -165,10 +171,11 @@ if (!count($errors)) {
                 $vcode = $utils->createVerificationCode();
                 $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
                 if (!$result->execute(array(':vcode' => $vcode, ':userid' => $user['id']))) {
-                  // XXXlog: User insertion failure!
+                  $utils->log('vhash_set_failure', 'user: '.$user['id']);
                   $errors[] = _('Could not initiate reset request. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                 }
                 else {
+                  $utils->log('pwd_reset_request', 'user: '.$user['id'].', email: '.$user['email']);
                   $resetcode = $vcode.dechex($user['id'] + $session['id']).'_'.$utils->createTimeCode($session, null, 60);
                   // Send email with instructions for resetting the password.
                   $mail = new email();
@@ -191,6 +198,7 @@ if (!count($errors)) {
                     $pagetype = 'resetmail_sent';
                   }
                   else {
+                    $utils->log('pwd_reset_mail_failure', 'user: '.$user['id'].', email: '.$user['email']);
                     $errors[] = _('The email with password reset instructions could not be sent to you. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
                   }
                 }
@@ -208,7 +216,7 @@ if (!count($errors)) {
           $result->execute(array(':userid' => $session['user']));
           $user = $result->fetch(PDO::FETCH_ASSOC);
           if (!$user['id']) {
-            // XXXlog: Unexpected failure to fetch user data!
+            $utils->log('reset_user_read_failure', 'user: '.$session['user']);
           }
           $pagetype = 'resetpwd';
         }
@@ -224,7 +232,7 @@ if (!count($errors)) {
         if ($user['id']) {
           $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = \'\', `status` = \'ok\' WHERE `id` = :userid;');
           if (!$result->execute(array(':userid' => $user['id']))) {
-            // XXXlog: Unexpected failure to save verification!
+            $utils->log('verification_save_failure', 'user: '.$user['id']);
             $errors[] = _('Could not save confirmation. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
           }
           $pagetype = 'verification_done';
@@ -253,11 +261,11 @@ if (!count($errors)) {
                 $user['verify_hash'] = $utils->createVerificationCode();
                 $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
                 if (!$result->execute(array(':vcode' => $user['verify_hash'], ':userid' => $user['id']))) {
-                  // XXXlog: Unexpected failure to reset verify_hash!
+                  $utils->log('vhash_reset_failure', 'user: '.$user['id']);
                 }
                 $result = $db->prepare('UPDATE `auth_sessions` SET `user` = :userid WHERE `id` = :sessid;');
                 if (!$result->execute(array(':userid' => $user['id'], ':sessid' => $session['id']))) {
-                  // XXXlog: Unexpected failure to update session!
+                  $utils->log('reset_session_set_user_failure', 'session: '.$session['id']);
                 }
                 $pagetype = 'resetpwd';
                 $reset_fail = false;
@@ -274,7 +282,7 @@ if (!count($errors)) {
         $result->execute(array(':userid' => $session['user']));
         $user = $result->fetch(PDO::FETCH_ASSOC);
         if (!$user['id']) {
-          // XXXlog: Unexpected failure to fetch user data!
+          $utils->log('user_read_failure', 'user: '.$session['user']);
         }
         // Password reset requested.
         if (array_key_exists('pwd', $_POST) && array_key_exists('reset', $_POST) && array_key_exists('tcode', $_POST)) {
@@ -295,7 +303,7 @@ if (!count($errors)) {
             $newHash = $utils->pwdHash($_POST['pwd']);
             $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash, `verify_hash` = \'\' WHERE `id` = :userid;');
             if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $session['user']))) {
-              // XXXlog: Password reset failure!
+              $utils->log('pwd_reset_failure', 'user: '.$session['user']);
               $errors[] = _('Password reset failed. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
             }
             else {
@@ -320,7 +328,7 @@ if (!count($errors)) {
       $session = $row;
     }
     else {
-      // XXXlog: Unexpected failure to create session!
+      $utils->log('session_create_failure', 'key: '.$sesskey);
       $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
     }
   }

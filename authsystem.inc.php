@@ -18,13 +18,14 @@ require_once('../kairo/include/cbsm/util/document.php-class');
 require_once('../kairo/include/classes/email.php-class');
 // Class for sending emails
 require_once(__DIR__.'/authutils.php-class');
-$utils = new AuthUtils($settings);
 
 bindtextdomain('kairo_auth', 'en'); // XXX: Should negotiate locale.
 bind_textdomain_codeset('kairo_auth', 'utf-8');
 
 // Connect to our MySQL DB
 $db = new PDO($dbdata['dsn'], $dbdata['username'], $dbdata['password']);
+// Instantiate auth utils.
+$utils = new AuthUtils($settings, $db);
 
 /* Creating the DB tables:
 CREATE TABLE `auth_sessions` (
@@ -46,6 +47,15 @@ CREATE TABLE `auth_users` (
  `verify_hash` VARCHAR(150) NULL DEFAULT NULL ,
  PRIMARY KEY (`id`),
  UNIQUE (`email`)
+);
+CREATE TABLE `auth_log` (
+ `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT ,
+ `code` VARCHAR(100) NOT NULL ,
+ `info` TEXT NULL DEFAULT NULL ,
+ `ip_addr` VARCHAR(50) NULL DEFAULT NULL ,
+ `time_logged` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
+ PRIMARY KEY (`id`),
+ INDEX (`time_logged`)
 );
 */
 

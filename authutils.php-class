@@ -34,6 +34,9 @@ class AuthUtils {
   // function initSession()
   //   Initialize a session. Returns an associative array of all the DB fields of the session.
   //
+  // function getDomainBaseURL()
+  //   Get the base URL of the current domain, e.g. 'https://example.com'.
+  //
   // function checkPasswordConstraints($new_password, $user_email)
   //   Check password constraints and return an array of error messages (empty if all constraints are met).
   //
@@ -60,6 +63,9 @@ class AuthUtils {
   //
   // function pwdNeedsRehash($user)
   //   Return true if the pwdhash field of the user uses an outdated standard and needs to be rehashed.
+  //
+  // function appendLoginForm($dom_element, $session, $user)
+  //   append a login form for the given session to the given DOM element, possibly prefilling the email from the given user info array.
 
   function __construct($settings, $db) {
     // *** constructor ***
@@ -123,6 +129,10 @@ class AuthUtils {
       }
     }
     return $session;
+  }
+
+  function getDomainBaseURL() {
+    return ($this->running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'];
   }
 
   function checkPasswordConstraints($new_password, $user_email) {
@@ -209,6 +219,37 @@ class AuthUtils {
     else {
       return true;
     }
+  }
+
+  function appendLoginForm($dom_element, $session, $user) {
+    $form = $dom_element->appendForm('./', 'POST', 'loginform');
+    $form->setAttribute('id', 'loginform');
+    $form->setAttribute('class', 'loginarea hidden');
+    $ulist = $form->appendElement('ul');
+    $ulist->setAttribute('class', 'flat login');
+    $litem = $ulist->appendElement('li');
+    $inptxt = $litem->appendInputEmail('email', 30, 20, 'login_email', (intval(@$user['id'])?$user['email']:''));
+    $inptxt->setAttribute('autocomplete', 'email');
+    $inptxt->setAttribute('required', '');
+    $inptxt->setAttribute('placeholder', _('Email'));
+    $inptxt->setAttribute('class', 'login');
+    $litem = $ulist->appendElement('li');
+    $inptxt = $litem->appendInputPassword('pwd', 20, 20, 'login_pwd', '');
+    $inptxt->setAttribute('required', '');
+    $inptxt->setAttribute('placeholder', _('Password'));
+    $inptxt->setAttribute('class', 'login');
+    $litem = $ulist->appendElement('li');
+    $litem->appendLink('./?reset', _('Forgot password?'));
+    $litem = $ulist->appendElement('li');
+    $cbox = $litem->appendInputCheckbox('remember', 'login_remember', 'true', false);
+    $cbox->setAttribute('class', 'logincheck');
+    $label = $litem->appendLabel('login_remember', _('Remember me'));
+    $label->setAttribute('id', 'rememprompt');
+    $label->setAttribute('class', 'loginprompt');
+    $litem = $ulist->appendElement('li');
+    $litem->appendInputHidden('tcode', $this->createTimeCode($session));
+    $submit = $litem->appendInputSubmit(_('Log in / Register'));
+    $submit->setAttribute('class', 'loginbutton');
   }
 }
 ?>

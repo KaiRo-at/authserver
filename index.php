@@ -67,6 +67,10 @@ if (!count($errors)) {
           $utils->log('login', 'user: '.$user['id']);
           $sesskey = $utils->createSessionKey();
           setcookie('sessionkey', $sesskey, 0, "", "", !$utils->running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
+          // If the session has a redirect set, make sure it's performed.
+          if (strlen(@$session['saved_redirect'])) {
+            header('Location: '.$utils->getDomainBaseURL().$session['saved_redirect']);
+          }
           // If the session has a user set, create a new one - otherwise take existing session entry.
           if (intval($session['user'])) {
             $result = $db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`, `user`, `logged_in`) VALUES (:sesskey, :expire, :userid, TRUE);');
@@ -148,7 +152,7 @@ if (!count($errors)) {
             $mail->addMailText(sprintf(_('This email address, %s, has been used for registration on "%s".'),
                                       $user['email'], _('KaiRo.at Authentication Service'))."\n\n");
             $mail->addMailText(_('Please confirm that registration by clicking the following link (or calling it up in your browser):')."\n");
-            $mail->addMailText(($utils->running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'].strstr($_SERVER['REQUEST_URI'], '?', true)
+            $mail->addMailText($utils->getDomainBaseURL().strstr($_SERVER['REQUEST_URI'], '?', true)
                               .'?email='.rawurlencode($user['email']).'&verification_code='.rawurlencode($user['verify_hash'])."\n\n");
             $mail->addMailText(_('With this confirmation, you accept that we handle your data for the purpose of logging you into other websites when you request that.')."\n");
             $mail->addMailText(_('Those websites will get to know your email address but not your password, which we store securely.')."\n");
@@ -186,7 +190,7 @@ if (!count($errors)) {
               $mail->addMailText(sprintf(_('A request for setting a new password for this email address, %s, has been submitted on "%s".'),
                                         $user['email'], _('KaiRo.at Authentication Service'))."\n\n");
               $mail->addMailText(_('You can set a new password by clicking the following link (or calling it up in your browser):')."\n");
-              $mail->addMailText(($utils->running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'].strstr($_SERVER['REQUEST_URI'], '?', true)
+              $mail->addMailText($utils->getDomainBaseURL().strstr($_SERVER['REQUEST_URI'], '?', true)
                                 .'?email='.rawurlencode($user['email']).'&reset_code='.rawurlencode($resetcode)."\n\n");
               $mail->addMailText(_('If you do not call this confirmation link within 1 hour, this link expires and the existing password is being kept in place.')."\n\n");
               $mail->addMailText(sprintf(_('The %s team'), 'KaiRo.at'));
@@ -316,6 +320,8 @@ if (!count($errors)) {
   if ($pagetype == 'verification_sent') {
     $para = $body->appendElement('p', sprintf(_('An email for confirmation has been sent to %s. Please follow the link provided there to complete the process.'), $user['email']));
     $para->setAttribute('class', 'verifyinfo pending');
+    $para = $body->appendElement('p', _('Reload this page after you confirm to continue.'));
+    $para->setAttribute('class', 'verifyinfo pending');
   }
   elseif ($pagetype == 'resetmail_sent') {
     $para = $body->appendElement('p',
@@ -390,34 +396,7 @@ if (!count($errors)) {
       $para = $body->appendElement('p', _('Your password has successfully been reset. You can log in now with the new password.'));
       $para->setAttribute('class', 'resetinfo done');
     }
-    $form = $body->appendForm('./', 'POST', 'loginform');
-    $form->setAttribute('id', 'loginform');
-    $form->setAttribute('class', 'loginarea hidden');
-    $ulist = $form->appendElement('ul');
-    $ulist->setAttribute('class', 'flat login');
-    $litem = $ulist->appendElement('li');
-    $inptxt = $litem->appendInputEmail('email', 30, 20, 'login_email', (intval($user['id'])?$user['email']:''));
-    $inptxt->setAttribute('autocomplete', 'email');
-    $inptxt->setAttribute('required', '');
-    $inptxt->setAttribute('placeholder', _('Email'));
-    $inptxt->setAttribute('class', 'login');
-    $litem = $ulist->appendElement('li');
-    $inptxt = $litem->appendInputPassword('pwd', 20, 20, 'login_pwd', '');
-    $inptxt->setAttribute('required', '');
-    $inptxt->setAttribute('placeholder', _('Password'));
-    $inptxt->setAttribute('class', 'login');
-    $litem = $ulist->appendElement('li');
-    $litem->appendLink('./?reset', _('Forgot password?'));
-    $litem = $ulist->appendElement('li');
-    $cbox = $litem->appendInputCheckbox('remember', 'login_remember', 'true', false);
-    $cbox->setAttribute('class', 'logincheck');
-    $label = $litem->appendLabel('login_remember', _('Remember me'));
-    $label->setAttribute('id', 'rememprompt');
-    $label->setAttribute('class', 'loginprompt');
-    $litem = $ulist->appendElement('li');
-    $litem->appendInputHidden('tcode', $utils->createTimeCode($session));
-    $submit = $litem->appendInputSubmit(_('Log in / Register'));
-    $submit->setAttribute('class', 'loginbutton');
+    $utils->appendLoginForm($body, $session, $user);
   }
 }
 

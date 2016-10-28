@@ -18,12 +18,28 @@ $style = $head->appendElement('link');
 $style->setAttribute('rel', 'stylesheet');
 $style->setAttribute('href', 'authsystem.css');
 $head->appendJSFile('authsystem.js');
+$title->appendText('Authorization Request | KaiRo.at');
+$h1 = $body->appendElement('h1', 'KaiRo.at Authentication Server');
 
 $errors = $utils->checkForSecureConnection();
 
+$para = $body->appendElement('p', _('This login system does not work without JavaScript. Please activate JavaScript for this site to log in.'));
+$para->setAttribute('id', 'jswarning');
+$para->setAttribute('class', 'warn');
+
 if (!count($errors)) {
   $session = $utils->initSession(); // Read session or create new session and set cookie.
-  $user = array('id' => 0, 'email' => '');
+  if (intval($session['user'])) {
+    $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `id` = :userid;');
+    $result->execute(array(':userid' => $session['user']));
+    $user = $result->fetch(PDO::FETCH_ASSOC);
+    if (!$user['id']) {
+      $utils->log('user_read_failure', 'user: '.$session['user']);
+    }
+  }
+  else {
+    $user = array('id' => 0, 'email' => '');
+  }
   $pagetype = 'default';
   if (is_null($session)) {
     $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
@@ -41,13 +57,6 @@ if (!count($errors)) {
 
     // Display an authorization form.
     if (empty($_POST)) {
-      $title->appendText('Authorization Request | KaiRo.at');
-      $h1 = $body->appendElement('h1', 'KaiRo.at Authentication Server');
-
-      $para = $body->appendElement('p', _('This login system does not work without JavaScript. Please activate JavaScript for this site to log in.'));
-      $para->setAttribute('id', 'jswarning');
-      $para->setAttribute('class', 'warn');
-
       $para = $body->appendElement('p', sprintf(_('Hi %s!'), $user['email']));
       $para->setAttribute('class', 'userwelcome');
 
@@ -79,6 +88,12 @@ if (!count($errors)) {
     // Display login/register form.
     $para = $body->appendElement('p', _('You need to log in or register to continue.'));
     $para->setAttribute('class', 'logininfo');
+    $utils->appendLoginForm($body, $session, $user);
+    // Save the request in the session so we can get back to fulfilling it.
+    $result = $db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
+    if (!$result->execute(array(':redir' => $_SERVER['REQUEST_URI'], ':sessid' => $session['id']))) {
+      $utils->log('redir_save_failure', 'session: '.$session['id'].', redirect: '.$_SERVER['REQUEST_URI']);
+    }
   }
 }
 

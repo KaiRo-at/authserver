@@ -42,6 +42,7 @@ CREATE TABLE `auth_sessions` (
  `logged_in` BOOLEAN NOT NULL DEFAULT FALSE ,
  `time_created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
  `time_expire` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
+ `saved_redirect` VARCHAR(255) NOT NULL DEFAULT '' ,
  PRIMARY KEY (`id`),
  INDEX (`sesskey`),
  INDEX (`time_expire`)

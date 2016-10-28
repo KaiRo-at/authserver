@@ -3,7 +3,10 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 window.onload = function() {
-  document.getElementById("jswarning").classList.add("hidden");
+  var jsWarning = document.getElementById("jswarning");
+  if (jsWarning) {
+    document.getElementById("jswarning").classList.add("hidden");
+  }
   var loginForm = document.getElementById("loginform");
   if (loginForm) {
     loginForm.classList.remove("hidden");

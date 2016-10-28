@@ -15,6 +15,9 @@ class AuthUtils {
   // public $db
   //   A PDO database object for interaction.
   //
+  // public $running_on_localhost
+  //   A boolean telling if the system is running on localhost (where https is not required).
+  //
   // private $pwd_cost
   //   The cost parameter for use with PHP password_hash function.
   //
@@ -24,6 +27,9 @@ class AuthUtils {
   //
   // function log($code, $additional_info)
   //   Log an entry for admin purposes, with a code and some additional info.
+  //
+  // function checkForSecureConnection()
+  //   Check is the connection is secure and return an array of error messages (empty if it's secure).
   //
   // function checkPasswordConstraints($new_password, $user_email)
   //   Check password constraints and return an array of error messages (empty if all constraints are met).
@@ -55,6 +61,7 @@ class AuthUtils {
   function __construct($settings, $db) {
     // *** constructor ***
     $this->db = $db;
+    $this->running_on_localhost = preg_match('/^((.+\.)?localhost|127\.0\.0\.\d+)$/', $_SERVER['SERVER_NAME']);
     if (array_key_exists('pwd_cost', $settings)) {
       $this->pwd_cost = $settings['pwd_cost'];
     }
@@ -64,6 +71,7 @@ class AuthUtils {
   }
 
   public $db = null;
+  public $running_on_localhost = false;
   private $pwd_cost = 10;
   private $pwd_nonces = array();
 
@@ -72,6 +80,14 @@ class AuthUtils {
     if (!$result->execute(array(':code' => $code, ':info' => $info, ':ipaddr' => $_SERVER['REMOTE_ADDR']))) {
       // print($result->errorInfo()[2]);
     }
+  }
+
+  function checkForSecureConnection() {
+    $errors = array();
+    if (($_SERVER['SERVER_PORT'] != 443) && !$this->running_on_localhost) {
+      $errors[] = _('You are not accessing this site on a secure connection, so authentication doesn\'t work.');
+    }
+    return $errors;
   }
 
   function checkPasswordConstraints($new_password, $user_email) {

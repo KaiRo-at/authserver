@@ -19,10 +19,7 @@ $head->appendJSFile('authsystem.js');
 $title->appendText('KaiRo.at Authentication Server');
 $h1 = $body->appendElement('h1', 'KaiRo.at Authentication Server');
 
-$running_on_localhost = preg_match('/^((.+\.)?localhost|127\.0\.0\.\d+)$/', $_SERVER['SERVER_NAME']);
-if (($_SERVER['SERVER_PORT'] != 443) && !$running_on_localhost) {
-  $errors[] = _('You are not accessing this site on a secure connection, so authentication doesn\'t work.');
-}
+$errors += $utils->checkForSecureConnection();
 
 $para = $body->appendElement('p', _('This login system does not work without JavaScript. Please activate JavaScript for this site to log in.'));
 $para->setAttribute('id', 'jswarning');
@@ -77,7 +74,7 @@ if (!count($errors)) {
               // Log user in - update session key for that, see https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines#Login
               $utils->log('login', 'user: '.$user['id']);
               $sesskey = $utils->createSessionKey();
-              setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
+              setcookie('sessionkey', $sesskey, 0, "", "", !$utils->running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
               // If the session has a user set, create a new one - otherwise take existing session entry.
               if (intval($session['user'])) {
                 $result = $db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`, `user`, `logged_in`) VALUES (:sesskey, :expire, :userid, TRUE);');
@@ -150,7 +147,7 @@ if (!count($errors)) {
                 $mail->addMailText(sprintf(_('This email address, %s, has been used for registration on "%s".'),
                                           $user['email'], _('KaiRo.at Authentication Service'))."\n\n");
                 $mail->addMailText(_('Please confirm that registration by clicking the following link (or calling it up in your browser):')."\n");
-                $mail->addMailText(($running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'].strstr($_SERVER['REQUEST_URI'], '?', true)
+                $mail->addMailText(($utils->running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'].strstr($_SERVER['REQUEST_URI'], '?', true)
                                   .'?email='.rawurlencode($user['email']).'&verification_code='.rawurlencode($user['verify_hash'])."\n\n");
                 $mail->addMailText(_('With this confirmation, you accept that we handle your data for the purpose of logging you into other websites when you request that.')."\n");
                 $mail->addMailText(_('Those websites will get to know your email address but not your password, which we store securely.')."\n");
@@ -188,7 +185,7 @@ if (!count($errors)) {
                   $mail->addMailText(sprintf(_('A request for setting a new password for this email address, %s, has been submitted on "%s".'),
                                             $user['email'], _('KaiRo.at Authentication Service'))."\n\n");
                   $mail->addMailText(_('You can set a new password by clicking the following link (or calling it up in your browser):')."\n");
-                  $mail->addMailText(($running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'].strstr($_SERVER['REQUEST_URI'], '?', true)
+                  $mail->addMailText(($utils->running_on_localhost?'http':'https').'://'.$_SERVER['SERVER_NAME'].strstr($_SERVER['REQUEST_URI'], '?', true)
                                     .'?email='.rawurlencode($user['email']).'&reset_code='.rawurlencode($resetcode)."\n\n");
                   $mail->addMailText(_('If you do not call this confirmation link within 1 hour, this link expires and the existing password is being kept in place.')."\n\n");
                   $mail->addMailText(sprintf(_('The %s team'), 'KaiRo.at'));
@@ -317,7 +314,7 @@ if (!count($errors)) {
   if (is_null($session)) {
     // Create new session and set cookie.
     $sesskey = $utils->createSessionKey();
-    setcookie('sessionkey', $sesskey, 0, "", "", !$running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
+    setcookie('sessionkey', $sesskey, 0, "", "", !$utils->running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
     $result = $db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`) VALUES (:sesskey, :expire);');
     $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+5 minutes'))));
     // After insert, actually fetch the session row from the DB so we have all values.
@@ -347,7 +344,7 @@ if (!count($errors)) {
   elseif ($pagetype == 'resetstart') {
     $para = $body->appendElement('p', _('If you forgot your password or didn\'t receive the registration confirmation, please enter your email here.'));
     $para->setAttribute('class', '');
-    $form = $body->appendForm('?reset', 'POST', 'resetform');
+    $form = $body->appendForm('./?reset', 'POST', 'resetform');
     $form->setAttribute('id', 'loginform');
     $form->setAttribute('class', 'loginarea hidden');
     $ulist = $form->appendElement('ul');
@@ -364,7 +361,7 @@ if (!count($errors)) {
   elseif ($pagetype == 'resetpwd') {
     $para = $body->appendElement('p', sprintf(_('You can set a new password for %s here.'), $user['email']));
     $para->setAttribute('class', '');
-    $form = $body->appendForm('?', 'POST', 'newpwdform');
+    $form = $body->appendForm('./', 'POST', 'newpwdform');
     $form->setAttribute('id', 'loginform');
     $form->setAttribute('class', 'loginarea hidden');
     $ulist = $form->appendElement('ul');
@@ -399,9 +396,9 @@ if (!count($errors)) {
     $ulist = $div->appendElement('ul');
     $ulist->setAttribute('class', 'flat');
     $litem = $ulist->appendElement('li');
-    $link = $litem->appendLink('?logout', _('Log out'));
+    $link = $litem->appendLink('./?logout', _('Log out'));
     $litem = $ulist->appendElement('li');
-    $litem->appendLink('?reset', _('Set new password'));
+    $litem->appendLink('./?reset', _('Set new password'));
   }
   else { // not logged in
     if ($pagetype == 'verification_done') {
@@ -412,7 +409,7 @@ if (!count($errors)) {
       $para = $body->appendElement('p', _('Your password has successfully been reset. You can log in now with the new password.'));
       $para->setAttribute('class', 'resetinfo done');
     }
-    $form = $body->appendForm('?', 'POST', 'loginform');
+    $form = $body->appendForm('./', 'POST', 'loginform');
     $form->setAttribute('id', 'loginform');
     $form->setAttribute('class', 'loginarea hidden');
     $ulist = $form->appendElement('ul');
@@ -429,7 +426,7 @@ if (!count($errors)) {
     $inptxt->setAttribute('placeholder', _('Password'));
     $inptxt->setAttribute('class', 'login');
     $litem = $ulist->appendElement('li');
-    $litem->appendLink('?reset', _('Forgot password?'));
+    $litem->appendLink('./?reset', _('Forgot password?'));
     $litem = $ulist->appendElement('li');
     $cbox = $litem->appendInputCheckbox('remember', 'login_remember', 'true', false);
     $cbox->setAttribute('class', 'logincheck');

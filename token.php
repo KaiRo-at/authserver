@@ -3,7 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Simple server based on https://bshaffer.github.io/oauth2-server-php-docs/cookbook
+// Called with e.g. curl .../token -d 'grant_type=authorization_code&client_id=testclient&client_secret=testpass&code=&state=f00bar&redirect_uri=http%3A%2F%2Ffake.example.com%2F'
+// Response is always JSON.
 
 // Include the common auth system files (including the OAuth2 Server object).
 require_once(__DIR__.'/authsystem.inc.php');

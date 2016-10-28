@@ -31,6 +31,9 @@ class AuthUtils {
   // function checkForSecureConnection()
   //   Check is the connection is secure and return an array of error messages (empty if it's secure).
   //
+  // function initSession()
+  //   Initialize a session. Returns an associative array of all the DB fields of the session.
+  //
   // function checkPasswordConstraints($new_password, $user_email)
   //   Check password constraints and return an array of error messages (empty if all constraints are met).
   //
@@ -61,6 +64,7 @@ class AuthUtils {
   function __construct($settings, $db) {
     // *** constructor ***
     $this->db = $db;
+    $this->db->exec("SET time_zone='+00:00';"); // Execute directly on PDO object, set session to UTC to make our gmdate() values match correctly.
     $this->running_on_localhost = preg_match('/^((.+\.)?localhost|127\.0\.0\.\d+)$/', $_SERVER['SERVER_NAME']);
     if (array_key_exists('pwd_cost', $settings)) {
       $this->pwd_cost = $settings['pwd_cost'];
@@ -88,6 +92,37 @@ class AuthUtils {
       $errors[] = _('You are not accessing this site on a secure connection, so authentication doesn\'t work.');
     }
     return $errors;
+  }
+
+  function initSession() {
+    $session = null;
+    if (strlen(@$_COOKIE['sessionkey'])) {
+      // Fetch the session - or at least try to.
+      $result = $this->db->prepare('SELECT * FROM `auth_sessions` WHERE `sesskey` = :sesskey AND `time_expire` > :expire;');
+      $result->execute(array(':sesskey' => $_COOKIE['sessionkey'], ':expire' => gmdate('Y-m-d H:i:s')));
+      $row = $result->fetch(PDO::FETCH_ASSOC);
+      if ($row) {
+        $session = $row;
+      }
+    }
+    if (is_null($session)) {
+      // Create new session and set cookie.
+      $sesskey = $this->createSessionKey();
+      setcookie('sessionkey', $sesskey, 0, "", "", !$this->running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
+      $result = $this->db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`) VALUES (:sesskey, :expire);');
+      $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+5 minutes'))));
+      // After insert, actually fetch the session row from the DB so we have all values.
+      $result = $this->db->prepare('SELECT * FROM auth_sessions WHERE `sesskey` = :sesskey AND `time_expire` > :expire;');
+      $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s')));
+      $row = $result->fetch(PDO::FETCH_ASSOC);
+      if ($row) {
+        $session = $row;
+      }
+      else {
+        $this->log('session_create_failure', 'key: '.$sesskey);
+      }
+    }
+    return $session;
   }
 
   function checkPasswordConstraints($new_password, $user_email) {

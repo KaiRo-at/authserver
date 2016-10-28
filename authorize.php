@@ -55,8 +55,8 @@ if (!count($errors)) {
       exit();
     }
 
-    // Display an authorization form.
-    if (empty($_POST)) {
+    // Display an authorization form (unless the scope is email, which we always grant in this system).
+    if (empty($_POST) && (@$request->query['scope'] != 'email')) {
       $para = $body->appendElement('p', sprintf(_('Hi %s!'), $user['email']));
       $para->setAttribute('class', 'userwelcome');
 
@@ -71,7 +71,7 @@ if (!count($errors)) {
     }
     else {
       // Handle authorize request, forwarding code in GET parameters if the user has authorized your client.
-      $is_authorized = ($_POST['authorized'] === 'yes');
+      $is_authorized = (($_POST['authorized'] === 'yes') || ($request->query['scope'] == 'email'));
       $server->handleAuthorizeRequest($request, $response, $is_authorized);
       /* For testing only
       if ($is_authorized) {

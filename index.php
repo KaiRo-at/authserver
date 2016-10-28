@@ -70,6 +70,11 @@ if (!count($errors)) {
           // If the session has a redirect set, make sure it's performed.
           if (strlen(@$session['saved_redirect'])) {
             header('Location: '.$utils->getDomainBaseURL().$session['saved_redirect']);
+            // Remove redirect.
+            $result = $db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
+            if (!$result->execute(array(':redir' => '', ':sessid' => $session['id']))) {
+              $utils->log('redir_save_failure', 'session: '.$session['id'].', redirect: (empty)');
+            }
           }
           // If the session has a user set, create a new one - otherwise take existing session entry.
           if (intval($session['user'])) {

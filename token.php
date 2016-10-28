@@ -9,7 +9,14 @@
 // Include the common auth system files (including the OAuth2 Server object).
 require_once(__DIR__.'/authsystem.inc.php');
 
-// Handle a request for an OAuth2.0 Access Token and send the response to the client
-$server->handleTokenRequest(OAuth2\Request::createFromGlobals())->send();
+$errors = $utils->checkForSecureConnection();
 
+if (!count($errors)) {
+  // Handle a request for an OAuth2.0 Access Token and send the response to the client
+  $server->handleTokenRequest(OAuth2\Request::createFromGlobals())->send();
+}
+else {
+  print(json_encode(array('error' => 'insecure_connection',
+                          'error_description' => 'Your connection is insecure. Token requests can only be made on secure connections.')));
+}
 ?>

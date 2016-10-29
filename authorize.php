@@ -6,7 +6,7 @@
 // Called e.g. as /authorize?response_type=code&client_id=testclient&state=f00bar&scope=email&redirect_uri=http%3A%2F%2Ffake.example.com%2F
 // This either redirects to the redirect URL with errors or success added as GET parameters,
 // or sends a HTML page asking for login / permission to scope (email is always granted in this system but not always for OAuth2 generically)
-// or sends errors as a JSOn document (hopefully shouldn't but seen that in testing).
+// or sends errors as a JSON document (hopefully shouldn't but seen that in testing).
 
 // Include the common auth system files (including the OAuth2 Server object).
 require_once(__DIR__.'/authsystem.inc.php');
@@ -72,7 +72,7 @@ if (!count($errors)) {
     else {
       // Handle authorize request, forwarding code in GET parameters if the user has authorized your client.
       $is_authorized = (($_POST['authorized'] === 'yes') || ($request->query['scope'] == 'email'));
-      $server->handleAuthorizeRequest($request, $response, $is_authorized);
+      $server->handleAuthorizeRequest($request, $response, $is_authorized, $user['id']);
       /* For testing only
       if ($is_authorized) {
         // this is only here so that you get to see your code in the cURL request. Otherwise, we'd redirect back to the client

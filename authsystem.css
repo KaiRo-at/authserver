@@ -28,6 +28,22 @@ form.flat {
   padding: 0px;
 }
 
+table.border {
+ border-spacing: 0px;
+ border-collapse: collapse;
+ empty-cells: show;
+ border-left: 1px solid #336699;
+ border-top: 1px solid #336699;
+}
+table.border th, table.border td {
+ border-bottom: 1px solid #336699;
+ border-right: 1px solid #336699;
+}
+table.border td {
+ padding-left: 3px;
+ padding-right: 3px;
+}
+
 .small {
   font-size: 0.75em;
 }

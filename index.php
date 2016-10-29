@@ -284,6 +284,39 @@ if (!count($errors)) {
       $errors[] = _('The password reset link you called is not valid. Possibly it has expired and you need to call the "Password forgotten?" function again.');
     }
   }
+  elseif (array_key_exists('clients', $_GET)) {
+    $result = $db->prepare('SELECT `id`,`email` FROM `auth_users` WHERE `id` = :userid;');
+    $result->execute(array(':userid' => $session['user']));
+    $user = $result->fetch(PDO::FETCH_ASSOC);
+    if ($session['logged_in'] && $user['id']) {
+      if (array_key_exists('client_id', $_POST) && (strlen($_POST['client_id']) >= 5)) {
+        $clientid = $_POST['client_id'];
+        $clientsecret = $utils->createClientSecret();
+        $rediruri = strval(@$_POST['redirect_uri']);
+        $scope = strval(@$_POST['scope']);
+        $result = $db->prepare('INSERT INTO `oauth_clients` (`client_id`, `client_secret`, `redirect_uri`, `scope`, `user_id`) VALUES (:clientid, :secret, :rediruri, :scope, :userid);');
+        if (!$result->execute(array(':clientid' => $clientid,
+                                    ':secret' => $clientsecret,
+                                    ':rediruri' => $rediruri,
+                                    ':scope' => $scope,
+                                    ':userid' => $user['id']))) {
+          $utils->log('client_save_failure', 'client: '.$clientid);
+          $errors[] = 'Unexpectedly failed to save new client information. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.';
+        }
+      }
+      if (!count($errors)) {
+        // List clients
+        $result = $db->prepare('SELECT `client_id`,`client_secret`,`redirect_uri`,`scope` FROM `oauth_clients` WHERE `user_id` = :userid;');
+        $result->execute(array(':userid' => $user['id']));
+        $clients = $result->fetchAll(PDO::FETCH_ASSOC);
+        if (!$clients) { $clients = array(); }
+        $pagetype = 'clientlist';
+      }
+    }
+    else {
+      $errors[] = _('This function is only available if you are logged in.');
+    }
+  }
   elseif (intval($session['user'])) {
     $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `id` = :userid;');
     $result->execute(array(':userid' => $session['user']));
@@ -376,6 +409,45 @@ if (!count($errors)) {
     }
     $submit = $litem->appendInputSubmit(_('Save password'));
   }
+  elseif ($pagetype == 'clientlist') {
+    $scopes = array('clientreg', 'email');
+    $form = $body->appendForm('?clients', 'POST', 'newclientform');
+    $form->setAttribute('id', 'clientform');
+    $tbl = $form->appendElement('table');
+    $tbl->setAttribute('class', 'clientlist border');
+    $thead = $tbl->appendElement('thead');
+    $trow = $thead->appendElement('tr');
+    $trow->appendElement('th', _('Client ID'));
+    $trow->appendElement('th', _('Client Secrect'));
+    $trow->appendElement('th', _('Redirect URI'));
+    $trow->appendElement('th', _('Scope'));
+    $trow->appendElement('th');
+    $tbody = $tbl->appendElement('tbody');
+    foreach ($clients as $client) {
+      $trow = $tbody->appendElement('tr');
+      $trow->appendElement('td', $client['client_id']);
+      $trow->appendElement('td', $client['client_secret']);
+      $trow->appendElement('td', $client['redirect_uri']);
+      $trow->appendElement('td', $client['scope']);
+      $trow->appendElement('td'); // Future: Delete link?
+    }
+    // Form fields for adding a new one.
+    $tfoot = $tbl->appendElement('tfoot');
+    $trow = $tfoot->appendElement('tr');
+    $cell = $trow->appendElement('td');
+    $inptxt = $cell->appendInputText('client_id', 80, 25, 'client_id');
+    $cell = $trow->appendElement('td'); // Empty, as secret will be generated.
+    $cell = $trow->appendElement('td');
+    $inptxt = $cell->appendInputText('redirect_uri', 500, 50, 'redirect_uri');
+    $cell = $trow->appendElement('td');
+    $select = $cell->appendElementSelect('scope');
+    foreach ($scopes as $scope) {
+      $select->appendElementOption($scope, $scope);
+    }
+    //$inptxt = $cell->appendInputText('scope', 100, 20, 'scope');
+    $cell = $trow->appendElement('td');
+    $submit = $cell->appendInputSubmit(_('Create'));
+  }
   elseif ($session['logged_in']) {
     if ($pagetype == 'reset_done') {
       $para = $body->appendElement('p', _('Your password has successfully been reset.'));
@@ -389,6 +461,10 @@ if (!count($errors)) {
     $ulist->setAttribute('class', 'flat');
     $litem = $ulist->appendElement('li');
     $link = $litem->appendLink('./?logout', _('Log out'));
+    if (in_array($user['email'], $utils->client_reg_email_whitelist)) {
+      $litem = $ulist->appendElement('li');
+      $link = $litem->appendLink('./?clients', _('Manage OAuth2 clients'));
+    }
     $litem = $ulist->appendElement('li');
     $litem->appendLink('./?reset', _('Set new password'));
   }

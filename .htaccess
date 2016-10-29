@@ -1,0 +1,5 @@
+	RewriteEngine On
+	# Send calls to the PHP equivalents.
+	RewriteCond %{query_string} ^(.+) [NC]
+	RewriteRule ^(authorize|token|api)$ /$1.php?%1 [L,NE,PT]
+	RewriteRule ^(authorize|token|api)$ /$1.php [L,NE,PT]

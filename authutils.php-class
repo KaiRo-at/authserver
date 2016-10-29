@@ -18,6 +18,9 @@ class AuthUtils {
   // public $running_on_localhost
   //   A boolean telling if the system is running on localhost (where https is not required).
   //
+  // public $client_reg_email_whitelist
+  //   An array of emails that are whitelisted for registering clients.
+  //
   // private $pwd_cost
   //   The cost parameter for use with PHP password_hash function.
   //
@@ -45,6 +48,9 @@ class AuthUtils {
   //
   // function createVerificationCode()
   //   Return a random acount/email verification code.
+  //
+  // function createClientSecret()
+  //   Return a random client secret.
   //
   // function createTimeCode($session, [$offset], [$validity_minutes])
   //   Return a time-based code based on the key and ID of the given session.
@@ -82,6 +88,7 @@ class AuthUtils {
 
   public $db = null;
   public $running_on_localhost = false;
+  public $client_reg_email_whitelist = array('kairo@kairo.at', 'com@kairo.at');
   private $pwd_cost = 10;
   private $pwd_nonces = array();
 
@@ -164,6 +171,10 @@ class AuthUtils {
 
   function createVerificationCode() {
     return bin2hex(openssl_random_pseudo_bytes(512 / 8)); // Get 512 bits of randomness (128 byte hex string).
+  }
+
+  function createClientSecret() {
+    return bin2hex(openssl_random_pseudo_bytes(160 / 8)); // Get 160 bits of randomness (40 byte hex string).
   }
 
   function createTimeCode($session, $offset = null, $validity_minutes = 10) {

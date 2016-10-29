@@ -71,7 +71,7 @@ if (!count($errors)) {
     }
     else {
       // Handle authorize request, forwarding code in GET parameters if the user has authorized your client.
-      $is_authorized = (($_POST['authorized'] === 'yes') || ($request->query['scope'] == 'email'));
+      $is_authorized = ((@$_POST['authorized'] === 'yes') || ($request->query['scope'] == 'email'));
       $server->handleAuthorizeRequest($request, $response, $is_authorized, $user['id']);
       /* For testing only
       if ($is_authorized) {

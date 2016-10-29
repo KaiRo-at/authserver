@@ -1,5 +1,8 @@
-	RewriteEngine On
-	# Send calls to the PHP equivalents.
-	RewriteCond %{query_string} ^(.+) [NC]
-	RewriteRule ^(authorize|token|api)$ /$1.php?%1 [L,NE,PT]
-	RewriteRule ^(authorize|token|api)$ /$1.php [L,NE,PT]
+# Make sure the MultiViews from mod_negotiation do not interfere with the forwarding set below.
+Options -MultiViews
+
+RewriteEngine On
+# Send calls to the PHP equivalents.
+RewriteCond %{query_string} ^(.+) [NC]
+RewriteRule ^(authorize|token|api)$ $1.php?%1 [L,NE,PT]
+RewriteRule ^(authorize|token|api)$ $1.php [L,NE,PT]

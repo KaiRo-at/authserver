@@ -22,6 +22,7 @@ $title->appendText('Authorization Request | KaiRo.at');
 $h1 = $body->appendElement('h1', 'KaiRo.at Authentication Server');
 
 $errors = $utils->checkForSecureConnection();
+$utils->sendSecurityHeaders();
 
 $para = $body->appendElement('p', _('This login system does not work without JavaScript. Please activate JavaScript for this site to log in.'));
 $para->setAttribute('id', 'jswarning');

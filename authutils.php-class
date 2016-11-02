@@ -107,6 +107,26 @@ class AuthUtils {
     return $errors;
   }
 
+  function sendSecurityHeaders() {
+    // Send various headers that we want to have for security resons, mostly as recommended by https://observatory.mozilla.org/
+
+    // CSP - see https://wiki.mozilla.org/Security/Guidelines/Web_Security#Content_Security_Policy
+    // Disable unsafe inline/eval, only allow loading of resources (images, fonts, scripts, etc.) from ourselves; also disable framing.
+    header('Content-Security-Policy: default-src \'none\';img-src \'self\'; script-src \'self\'; style-src \'self\'; frame-ancestors \'none\'');
+
+    // X-Content-Type-Options - see https://wiki.mozilla.org/Security/Guidelines/Web_Security#X-Content-Type-Options
+    // Prevent browsers from incorrectly detecting non-scripts as scripts
+    header('X-Content-Type-Options: nosniff');
+
+    // X-Frame-Options (for older browsers) - see https://wiki.mozilla.org/Security/Guidelines/Web_Security#X-Frame-Options
+    // Block site from being framed
+    header('X-Frame-Options: DENY');
+
+    // X-XSS-Protection (for older browsers) - see https://wiki.mozilla.org/Security/Guidelines/Web_Security#X-XSS-Protection
+    // Block pages from loading when they detect reflected XSS attacks
+    header('X-XSS-Protection: 1; mode=block');
+  }
+
   function initSession() {
     $session = null;
     if (strlen(@$_COOKIE['sessionkey'])) {

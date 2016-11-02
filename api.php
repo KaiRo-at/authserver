@@ -11,6 +11,7 @@
 require_once(__DIR__.'/authsystem.inc.php');
 
 $errors = $utils->checkForSecureConnection();
+$utils->sendSecurityHeaders();
 
 if (!count($errors)) {
   // Handle a request to a resource and authenticate the access token

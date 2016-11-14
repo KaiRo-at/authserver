@@ -215,7 +215,7 @@ if (!count($errors)) {
       }
     }
     else {
-      $errors[] = _('The form you used was not valid. Possibly it has expired and you need to initiate the action again.');
+      $errors[] = _('The form you used was not valid. Possibly it has expired and you need to initiate the action again, or you have disabled cookies for this site.');
     }
   }
   elseif (array_key_exists('reset', $_GET)) {
@@ -361,11 +361,17 @@ if (!count($errors)) {
     $para->setAttribute('class', 'verifyinfo pending');
     $para = $body->appendElement('p', _('Reload this page after you confirm to continue.'));
     $para->setAttribute('class', 'verifyinfo pending');
+    $para = $body->appendElement('p');
+    $para->setAttribute('class', 'verifyinfo pending');
+    $link = $para->appendLink('./', _('Reload'));
   }
   elseif ($pagetype == 'resetmail_sent') {
     $para = $body->appendElement('p',
         _('An email has been sent to the requested account with further information. If you do not receive an email then please confirm you have entered the same email address used during account registration.'));
     $para->setAttribute('class', 'resetinfo pending');
+    $para = $body->appendElement('p');
+    $para->setAttribute('class', 'resetinfo pending small');
+    $link = $para->appendLink('./', _('Back to top'));
   }
   elseif ($pagetype == 'resetstart') {
     $para = $body->appendElement('p', _('If you forgot your password or didn\'t receive the registration confirmation, please enter your email here.'));
@@ -383,10 +389,13 @@ if (!count($errors)) {
     $litem = $ulist->appendElement('li');
     $litem->appendInputHidden('tcode', $utils->createTimeCode($session));
     $submit = $litem->appendInputSubmit(_('Send instructions to email'));
+    $para = $form->appendElement('p');
+    $para->setAttribute('class', 'toplink small');
+    $link = $para->appendLink('./', _('Cancel'));
   }
   elseif ($pagetype == 'resetpwd') {
     $para = $body->appendElement('p', sprintf(_('You can set a new password for %s here.'), $user['email']));
-    $para->setAttribute('class', '');
+    $para->setAttribute('class', 'newpwdinfo');
     $form = $body->appendForm('./', 'POST', 'newpwdform');
     $form->setAttribute('id', 'loginform');
     $form->setAttribute('class', 'loginarea hidden');
@@ -409,6 +418,9 @@ if (!count($errors)) {
       $litem->appendInputHidden('vcode', $user['verify_hash']);
     }
     $submit = $litem->appendInputSubmit(_('Save password'));
+    $para = $form->appendElement('p');
+    $para->setAttribute('class', 'toplink small');
+    $link = $para->appendLink('./', _('Cancel'));
   }
   elseif ($pagetype == 'clientlist') {
     $scopes = array('clientreg', 'email');
@@ -448,6 +460,9 @@ if (!count($errors)) {
     //$inptxt = $cell->appendInputText('scope', 100, 20, 'scope');
     $cell = $trow->appendElement('td');
     $submit = $cell->appendInputSubmit(_('Create'));
+    $para = $form->appendElement('p');
+    $para->setAttribute('class', 'toplink');
+    $link = $para->appendLink('./', _('Back to top'));
   }
   elseif ($session['logged_in']) {
     if ($pagetype == 'reset_done') {

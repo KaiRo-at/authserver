@@ -15,16 +15,36 @@ h1 {
   left: 0;
   right: 0;
   margin: 0;
-  padding: 10px 130px 0; /* IE8 and older do not support rem */
-  padding: 1rem 130px 0;
+  padding: 10px 0 0 130px; /* IE8 and older do not support rem */
+  padding: 1rem 0 0 130px;
   height: 60px; /* IE8 and older do not support rem */
   height: 4rem;
   min-height: calc(70px - 1rem);
+  font-size: 2em;
   background-color: #003366;
   color: #FFFFEE;
   background-image: url("KaiRoLogo-100x62.png");
   background-repeat: no-repeat;
   background-position: 10px 50%;
+  overflow: hidden;
+}
+@media screen and (max-width: 550px) {
+  h1 {
+    font-size: 1.5em;
+  }
+}
+@media screen and (max-width: 375px) {
+  h1 {
+    font-size: 1.2em;
+    padding-left: 120px;
+  }
+}
+@media screen and (max-width: 325px) {
+  h1 {
+    padding-top: 0.5rem;
+    height: 4.5rem;
+    min-height: calc(70px - 0.5rem);
+  }
 }
 
 a:link { color: #669999; }
@@ -112,6 +132,21 @@ table.border td {
   position: absolute;
   right: -1000px;
   opacity: 0;
+}
+
+input,
+select {
+  font-size: .9em;
+}
+
+@media screen and (max-width: 375px) {
+  /* On smaller devices, make the form elements into larger touch targets. */
+  input,
+  select {
+    font-size: 1em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+  }
 }
 
 input:invalid {

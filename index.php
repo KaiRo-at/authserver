@@ -17,6 +17,11 @@ $head->appendJSFile('authsystem.js');
 $title->appendText('KaiRo.at Authentication Server');
 $h1 = $body->appendElement('h1', 'KaiRo.at Authentication Server');
 
+// Make the document not be scaled on mobile devices.
+$vpmeta = $head->appendElement('meta');
+$vpmeta->setAttribute('name', 'viewport');
+$vpmeta->setAttribute('content', 'width=device-width, height=device-height');
+
 $errors = $utils->checkForSecureConnection();
 $utils->sendSecurityHeaders();
 

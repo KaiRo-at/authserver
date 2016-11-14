@@ -6,7 +6,30 @@ body {
   font-family: sans-serif;
 /*  margin: 0; */
   background-color: #FFFFEE;
+  padding-top: 5em; /* leave space for total height of h1: 4+1(r)em */
 }
+
+h1 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 10px 130px 0; /* IE8 and older do not support rem */
+  padding: 1rem 130px 0;
+  height: 60px; /* IE8 and older do not support rem */
+  height: 4rem;
+  min-height: calc(70px - 1rem);
+  background-color: #003366;
+  color: #FFFFEE;
+  background-image: url("KaiRoLogo-100x62.png");
+  background-repeat: no-repeat;
+  background-position: 10px 50%;
+}
+
+a:link { color: #669999; }
+a:visited { color: #003366; }
+a:hover, a:active { color: #88BBBB; }
 
 ul.flat {
  list-style-type: none;
@@ -42,6 +65,38 @@ table.border th, table.border td {
 table.border td {
  padding-left: 3px;
  padding-right: 3px;
+}
+
+.loginheader {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin: 5px 10px 0; /* IE8 and older do not support rem */
+  margin: 0.5rem 1rem 0;
+}
+
+.loginlinks {
+  margin: 5px 10px 0; /* IE8 and older do not support rem */
+  margin: 0.5rem 1rem 0;
+}
+
+.loginarea {
+  margin: 5px 10px 0; /* IE8 and older do not support rem */
+  margin: 0.5rem 1rem 0;
+}
+
+.resetinfo,
+.verifyinfo,
+.newpwdinfo {
+  margin: 5px 10px 0; /* IE8 and older do not support rem */
+  margin: 0.5rem 1rem 0;
+}
+
+.resetinfo.done,
+.verifyinfo.done {
+  padding-left: 20px;
+  background-image: url("check.png");
+  background-repeat: no-repeat;
+  background-position: 0 50%;
 }
 
 .small {

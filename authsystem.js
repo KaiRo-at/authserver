@@ -5,10 +5,22 @@
 window.onload = function() {
   var jsWarning = document.getElementById("jswarning");
   if (jsWarning) {
-    document.getElementById("jswarning").classList.add("hidden");
+    if (jsWarning.classList) {
+      jsWarning.classList.add("hidden");
+    }
+    else {
+      // IE9 or older (sigh)
+      jsWarning.setAttribute("class", "warn hidden");
+    }
   }
   var loginForm = document.getElementById("loginform");
   if (loginForm) {
-    loginForm.classList.remove("hidden");
+    if (loginForm.classList) {
+      loginForm.classList.remove("hidden");
+    }
+    else {
+      // IE9 or older (sigh)
+      loginForm.setAttribute("class", "loginarea");
+    }
   }
 }

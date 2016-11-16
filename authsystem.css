@@ -106,7 +106,8 @@ table.border td {
 
 .resetinfo,
 .verifyinfo,
-.newpwdinfo {
+.newpwdinfo,
+.signinwelcome {
   margin: 5px 10px 0; /* IE8 and older do not support rem */
   margin: 0.5rem 1rem 0;
 }
@@ -117,6 +118,24 @@ table.border td {
   background-image: url("check.png");
   background-repeat: no-repeat;
   background-position: 0 50%;
+}
+
+.signinwelcome {
+  font-size: 1.2em;
+}
+
+.otheremaillinks > a {
+  background-color: #EEEEDD;
+  text-decoration: none;
+  padding: .2em;
+  border-radius: 3px;
+}
+.otheremaillinks > a:link, .otheremaillinks > a:visited { color: #BBBBBB; }
+.otheremaillinks > a:hover, .otheremaillinks > a:active { color: #808080; }
+
+#addanotheremail { /* HACK - not implemented yet */
+  background-color: transparent !important;
+  color: transparent !important;
 }
 
 .small {

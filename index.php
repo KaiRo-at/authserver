@@ -40,7 +40,7 @@ if (!count($errors)) {
     $result = $db->prepare('UPDATE `auth_sessions` SET `logged_in` = FALSE WHERE `id` = :sessid;');
     if (!$result->execute(array(':sessid' => $session['id']))) {
       $utils->log('logout_failure', 'session: '.$session['id']);
-      $errors[] = _('The email address is invalid.');
+      $errors[] = _('Unexpected error while logging out.');
     }
     $session['logged_in'] = 0;
   }

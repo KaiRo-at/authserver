@@ -30,6 +30,14 @@ $para->setAttribute('class', 'warn');
 
 if (!count($errors)) {
   $session = $utils->initSession(); // Read session or create new session and set cookie.
+  if ($session['logged_in'] && (@$_GET['logout'] == 1)) {
+    $result = $db->prepare('UPDATE `auth_sessions` SET `logged_in` = FALSE WHERE `id` = :sessid;');
+    if (!$result->execute(array(':sessid' => $session['id']))) {
+      $utils->log('logout_failure', 'session: '.$session['id']);
+      $errors[] = _('Unexpected error while logging out.');
+    }
+    $session['logged_in'] = 0;
+  }
   if (intval($session['user'])) {
     $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `id` = :userid;');
     $result->execute(array(':userid' => $session['user']));
@@ -41,7 +49,6 @@ if (!count($errors)) {
   else {
     $user = array('id' => 0, 'email' => '');
   }
-  $pagetype = 'default';
   if (is_null($session)) {
     $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
   }
@@ -56,8 +63,8 @@ if (!count($errors)) {
       exit();
     }
 
-    // Display an authorization form (unless the scope is email, which we always grant in this system).
     if (empty($_POST) && (@$request->query['scope'] != 'email')) {
+      // Display an authorization form (unless the scope is email, which we handle as a login request below).
       $para = $body->appendElement('p', sprintf(_('Hi %s!'), $user['email']));
       $para->setAttribute('class', 'userwelcome');
 
@@ -70,9 +77,33 @@ if (!count($errors)) {
       $submit = $form->appendInputSubmit(_('no'));
       $submit->setAttribute('name', 'authorized');
     }
+    elseif (empty($_POST) && (@$request->query['scope'] == 'email')) {
+      // Display an interstitial page for a login  when we have email scope (verified email for logging in).
+      $para = $body->appendElement('p', sprintf(_('Sign in to %s using…'), $request->query['client_id'])); // XXX: put domain name from redirect URI on there instead
+      $para->setAttribute('class', 'signinwelcome');
+      $form = $body->appendForm('', 'POST', 'loginauthform');
+      $form->setAttribute('id', 'loginauthform');
+      $form->setAttribute('class', 'loginarea');
+      $form->appendInputRadio('user_email', 'uemail_'.md5($user['email']), $user['email'], $user['email'] == $user['email']);
+      $form->appendLabel('uemail_'.md5($user['email']), $user['email']);
+      $para = $form->appendElement('p');
+      $para->setAttribute('class', 'small otheremaillinks');
+      $link = $para->appendLink('#', _('Add another email address'));
+      $link->setAttribute('id', 'addanotheremail'); // Makes the JS put the right functionality onto the link.
+      $para->appendText(' ');
+      $link = $para->appendLink('#', _('This is not me'));
+      $link->setAttribute('id', 'isnotme'); // Makes the JS put the right functionality onto the link.
+      $authinput = $form->appendInputHidden('authorized', 'yes');
+      $authinput->setAttribute('id', 'isauthorized');
+      $submit = $form->appendInputSubmit(_('Sign in'));
+      $para = $form->appendElement('p');
+      $para->setAttribute('class', 'small');
+      $link = $para->appendLink('#', _('Cancel'));
+      $link->setAttribute('id', 'cancelauth'); // Makes the JS put the right functionality onto the link.
+    }
     else {
       // Handle authorize request, forwarding code in GET parameters if the user has authorized your client.
-      $is_authorized = ((@$_POST['authorized'] === 'yes') || ($request->query['scope'] == 'email'));
+      $is_authorized = (@$_POST['authorized'] === 'yes');
       $server->handleAuthorizeRequest($request, $response, $is_authorized, $user['id']);
       /* For testing only
       if ($is_authorized) {
@@ -92,8 +123,9 @@ if (!count($errors)) {
     $utils->appendLoginForm($body, $session, $user);
     // Save the request in the session so we can get back to fulfilling it.
     $result = $db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
-    if (!$result->execute(array(':redir' => $_SERVER['REQUEST_URI'], ':sessid' => $session['id']))) {
-      $utils->log('redir_save_failure', 'session: '.$session['id'].', redirect: '.$_SERVER['REQUEST_URI']);
+    $saved_request = str_replace('&logout=1', '', $_SERVER['REQUEST_URI']); // Make sure to strip a logout to not get into a loop.
+    if (!$result->execute(array(':redir' => $saved_request, ':sessid' => $session['id']))) {
+      $utils->log('redir_save_failure', 'session: '.$session['id'].', redirect: '.$saved_request);
     }
   }
 }

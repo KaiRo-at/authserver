@@ -23,4 +23,23 @@ window.onload = function() {
       loginForm.setAttribute("class", "loginarea");
     }
   }
+  var cancelAuth = document.getElementById("cancelauth");
+  if (cancelAuth) {
+    cancelAuth.onclick = function() {
+      document.getElementById("isauthorized").value = "no";
+      document.getElementById("loginauthform").submit();
+    }
+  }
+  var addAnotherEmail = document.getElementById("addanotheremail");
+  if (addAnotherEmail) {
+    addAnotherEmail.onclick = function() {
+      // Not implemented yet.
+    }
+  }
+  var isNotMe = document.getElementById("isnotme");
+  if (isNotMe) {
+    isNotMe.onclick = function() {
+      location.href = location.href + "&logout=1";
+    }
+  }
 }

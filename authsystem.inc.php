@@ -53,6 +53,7 @@ CREATE TABLE `auth_users` (
  `pwdhash` VARCHAR(255) NOT NULL ,
  `status` ENUM('unverified','ok') NOT NULL DEFAULT 'unverified' ,
  `verify_hash` VARCHAR(150) NULL DEFAULT NULL ,
+ `group_id` MEDIUMINT UNSIGNED DEFAULT '0' ,
  PRIMARY KEY (`id`),
  UNIQUE (`email`)
 );

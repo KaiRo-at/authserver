@@ -94,6 +94,12 @@ table.border td {
   margin: 0.5rem 1rem 0;
 }
 
+.loginheader > .groupmails {
+  font-weight: normal;
+  margin: 5px 0; /* IE8 and older do not support rem */
+  margin: 0.5rem 0;
+}
+
 .loginlinks {
   margin: 5px 10px 0; /* IE8 and older do not support rem */
   margin: 0.5rem 1rem 0;
@@ -106,6 +112,7 @@ table.border td {
 
 .resetinfo,
 .verifyinfo,
+.addemailinfo,
 .newpwdinfo,
 .signinwelcome {
   margin: 5px 10px 0; /* IE8 and older do not support rem */
@@ -132,11 +139,6 @@ table.border td {
 }
 .otheremaillinks > a:link, .otheremaillinks > a:visited { color: #BBBBBB; }
 .otheremaillinks > a:hover, .otheremaillinks > a:active { color: #808080; }
-
-#addanotheremail { /* HACK - not implemented yet */
-  background-color: transparent !important;
-  color: transparent !important;
-}
 
 .small {
   font-size: 0.75em;

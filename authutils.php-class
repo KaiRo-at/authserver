@@ -37,6 +37,18 @@ class AuthUtils {
   // function initSession()
   //   Initialize a session. Returns an associative array of all the DB fields of the session.
   //
+  // function getLoginSession($user)
+  //   Return an associative array of a session with the given user logged in (new if user changed compared to given previous session, otherwise updated variant of that previous session).
+  //
+  // function setRedirect($session, $redirect)
+  //   Set a redirect on the session for performing later. Returns true if a redirect was saved, otherwise false.
+  //
+  // function doRedirectIfSet($session)
+  //   If the session has a redirect set, perform it. Returns true if a redirect was performed, otherwise false.
+  //
+  // function resetRedirect($session)
+  //   If the session has a redirect set, remove it. Returns true if a redirect was removed, otherwise false.
+  //
   // function getDomainBaseURL()
   //   Get the base URL of the current domain, e.g. 'https://example.com'.
   //
@@ -70,8 +82,12 @@ class AuthUtils {
   // function pwdNeedsRehash($user)
   //   Return true if the pwdhash field of the user uses an outdated standard and needs to be rehashed.
   //
-  // function appendLoginForm($dom_element, $session, $user)
-  //   append a login form for the given session to the given DOM element, possibly prefilling the email from the given user info array.
+  // function getGroupedEmails($group_id, [$exclude_email])
+  //   Return all emails grouped in the specified group ID, optionally exclude a specific email (e.g. because you only want non-current entries)
+  //
+  // function appendLoginForm($dom_element, $session, $user, [$addfields])
+  //   Append a login form for the given session to the given DOM element, possibly prefilling the email from the given user info array.
+  //     The optional $addfields parameter is an array of name=>value pairs of hidden fields to add to the form.
 
   function __construct($settings, $db) {
     // *** constructor ***
@@ -157,6 +173,90 @@ class AuthUtils {
       }
     }
     return $session;
+  }
+
+  function getLoginSession($userid, $prev_session) {
+    $session = $prev_session;
+    $sesskey = $this->createSessionKey();
+    setcookie('sessionkey', $sesskey, 0, "", "", !$this->running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
+    // If the previous session has a user set, create a new one - otherwise take existing session entry.
+    if (intval($session['user'])) {
+      $result = $this->db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`, `user`, `logged_in`) VALUES (:sesskey, :expire, :userid, TRUE);');
+      $result->execute(array(':sesskey' => $sesskey, ':userid' => $userid, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+1 day'))));
+      // After insert, actually fetch the session row from the DB so we have all values.
+      $result = $this->db->prepare('SELECT * FROM auth_sessions WHERE `sesskey` = :sesskey AND `time_expire` > :expire;');
+      $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s')));
+      $row = $result->fetch(PDO::FETCH_ASSOC);
+      if ($row) {
+        $session = $row;
+      }
+      else {
+        $utils->log('create_session_failure', 'at login, prev session: '.$session['id'].', new user: '.$userid);
+        $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+      }
+    }
+    else {
+      $result = $this->db->prepare('UPDATE `auth_sessions` SET `sesskey` = :sesskey, `user` = :userid, `logged_in` = TRUE, `time_expire` = :expire WHERE `id` = :sessid;');
+      if (!$result->execute(array(':sesskey' => $sesskey, ':userid' => $userid, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+1 day')), ':sessid' => $session['id']))) {
+        $utils->log('login_failure', 'session: '.$session['id'].', user: '.$userid);
+        $errors[] = _('Login failed unexpectedly. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+      }
+      else {
+        // After update, actually fetch the session row from the DB so we have all values.
+        $result = $this->db->prepare('SELECT * FROM auth_sessions WHERE `sesskey` = :sesskey AND `time_expire` > :expire;');
+        $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s')));
+        $row = $result->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+          $session = $row;
+        }
+      }
+    }
+    return $session;
+  }
+
+  function setRedirect($session, $redirect) {
+    $success = false;
+    // Save the request in the session so we can get back to fulfilling it if one of the links is clicked.
+    $result = $this->db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
+    if (!$result->execute(array(':redir' => $redirect, ':sessid' => $session['id']))) {
+      $this->log('redir_save_failure', 'session: '.$session['id'].', redirect: '.$redirect);
+    }
+    else {
+      $success = true;
+    }
+    return $success;
+  }
+
+  function doRedirectIfSet($session) {
+    $success = false;
+    // If the session has a redirect set, make sure it's performed.
+    if (strlen(@$session['saved_redirect'])) {
+      // Remove redirect.
+      $result = $this->db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
+      if (!$result->execute(array(':redir' => '', ':sessid' => $session['id']))) {
+        $this->log('redir_save_failure', 'session: '.$session['id'].', redirect: (empty)');
+      }
+      else {
+        $success = true;
+      }
+      header('Location: '.$this->getDomainBaseURL().$session['saved_redirect']);
+    }
+    return $success;
+  }
+
+  function resetRedirect($session) {
+    $success = false;
+    // If the session has a redirect set, remove it.
+    if (strlen(@$session['saved_redirect'])) {
+      $result = $this->db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
+      if (!$result->execute(array(':redir' => '', ':sessid' => $session['id']))) {
+        $this->log('redir_save_failure', 'session: '.$session['id'].', redirect: (empty)');
+      }
+      else {
+        $success = true;
+      }
+    }
+    return $success;
   }
 
   function getDomainBaseURL() {
@@ -253,7 +353,19 @@ class AuthUtils {
     }
   }
 
-  function appendLoginForm($dom_element, $session, $user) {
+  function getGroupedEmails($group_id, $exclude_email = '') {
+    $emails = array();
+    if (intval($group_id)) {
+      $result = $this->db->prepare('SELECT `email` FROM `auth_users` WHERE `group_id` = :groupid AND `status` = \'ok\' AND `email` != :excludemail ORDER BY `email` ASC;');
+      $result->execute(array(':groupid' => $group_id, ':excludemail' => $exclude_email));
+      foreach ($result->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $emails[] = $row['email'];
+      }
+    }
+    return $emails;
+  }
+
+  function appendLoginForm($dom_element, $session, $user, $addfields = array()) {
     $form = $dom_element->appendForm('./', 'POST', 'loginform');
     $form->setAttribute('id', 'loginform');
     $form->setAttribute('class', 'loginarea hidden');
@@ -280,6 +392,9 @@ class AuthUtils {
     $label->setAttribute('class', 'loginprompt');
     $litem = $ulist->appendElement('li');
     $litem->appendInputHidden('tcode', $this->createTimeCode($session));
+    foreach ($addfields as $fname => $fvalue) {
+      $litem->appendInputHidden($fname, $fvalue);
+    }
     $submit = $litem->appendInputSubmit(_('Log in / Register'));
     $submit->setAttribute('class', 'loginbutton');
   }

@@ -33,7 +33,7 @@ window.onload = function() {
   var addAnotherEmail = document.getElementById("addanotheremail");
   if (addAnotherEmail) {
     addAnotherEmail.onclick = function() {
-      // Not implemented yet.
+      location.href = "./?addemail";
     }
   }
   var isNotMe = document.getElementById("isnotme");

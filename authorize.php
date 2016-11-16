@@ -39,7 +39,7 @@ if (!count($errors)) {
     $session['logged_in'] = 0;
   }
   if (intval($session['user'])) {
-    $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `id` = :userid;');
+    $result = $db->prepare('SELECT `id`,`email`,`verify_hash`,`group_id` FROM `auth_users` WHERE `id` = :userid;');
     $result->execute(array(':userid' => $session['user']));
     $user = $result->fetch(PDO::FETCH_ASSOC);
     if (!$user['id']) {
@@ -84,8 +84,15 @@ if (!count($errors)) {
       $form = $body->appendForm('', 'POST', 'loginauthform');
       $form->setAttribute('id', 'loginauthform');
       $form->setAttribute('class', 'loginarea');
-      $form->appendInputRadio('user_email', 'uemail_'.md5($user['email']), $user['email'], $user['email'] == $user['email']);
-      $form->appendLabel('uemail_'.md5($user['email']), $user['email']);
+      $ulist = $form->appendElement('ul');
+      $ulist->setAttribute('class', 'flat emaillist');
+      $emails = $utils->getGroupedEmails($user['group_id']);
+      if (!count($emails)) { $emails = array($user['email']); }
+      foreach ($emails as $email) {
+        $litem = $ulist->appendElement('li');
+        $litem->appendInputRadio('user_email', 'uemail_'.md5($email), $email, $email == $user['email']);
+        $litem->appendLabel('uemail_'.md5($email), $email);
+      }
       $para = $form->appendElement('p');
       $para->setAttribute('class', 'small otheremaillinks');
       $link = $para->appendLink('#', _('Add another email address'));
@@ -100,8 +107,19 @@ if (!count($errors)) {
       $para->setAttribute('class', 'small');
       $link = $para->appendLink('#', _('Cancel'));
       $link->setAttribute('id', 'cancelauth'); // Makes the JS put the right functionality onto the link.
+      $utils->setRedirect($session, $_SERVER['REQUEST_URI']);
     }
     else {
+      // Switch to different user if we selected a different email within the group.
+      if (strlen(@$_POST['user_email']) && ($_POST['user_email'] != $user['email'])) {
+        $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash`,`group_id` FROM `auth_users` WHERE `group_id` = :groupid AND `email` = :email;');
+        $result->execute(array(':groupid' => $user['group_id'], ':email' => $_POST['user_email']));
+        $newuser = $result->fetch(PDO::FETCH_ASSOC);
+        if ($newuser) {
+          $user = $newuser;
+          $session = $utils->getLoginSession($user['id'], $session);
+        }
+      }
       // Handle authorize request, forwarding code in GET parameters if the user has authorized your client.
       $is_authorized = (@$_POST['authorized'] === 'yes');
       $server->handleAuthorizeRequest($request, $response, $is_authorized, $user['id']);
@@ -112,6 +130,7 @@ if (!count($errors)) {
         exit("SUCCESS! Authorization Code: $code");
       }
       */
+      $utils->resetRedirect($session);
       $response->send();
       exit();
     }
@@ -121,12 +140,7 @@ if (!count($errors)) {
     $para = $body->appendElement('p', _('You need to log in or register to continue.'));
     $para->setAttribute('class', 'logininfo');
     $utils->appendLoginForm($body, $session, $user);
-    // Save the request in the session so we can get back to fulfilling it.
-    $result = $db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
-    $saved_request = str_replace('&logout=1', '', $_SERVER['REQUEST_URI']); // Make sure to strip a logout to not get into a loop.
-    if (!$result->execute(array(':redir' => $saved_request, ':sessid' => $session['id']))) {
-      $utils->log('redir_save_failure', 'session: '.$session['id'].', redirect: '.$saved_request);
-    }
+    $utils->setRedirect($session, str_replace('&logout=1', '', $_SERVER['REQUEST_URI'])); // Make sure to strip a logout to not get into a loop.
   }
 }
 

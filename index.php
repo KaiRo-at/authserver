@@ -49,9 +49,11 @@ if (!count($errors)) {
       $errors[] = _('The email address is invalid.');
     }
     elseif ($utils->verifyTimeCode(@$_POST['tcode'], $session)) {
-      $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash` FROM `auth_users` WHERE `email` = :email;');
+      $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash`,`group_id` FROM `auth_users` WHERE `email` = :email;');
       $result->execute(array(':email' => $_POST['email']));
       $user = $result->fetch(PDO::FETCH_ASSOC);
+      // If we need to add the email to a group, note here which user's group we should be added to - otherwise, set to 0.
+      $addgroup = (array_key_exists('grouptoexisting', $_POST) && intval($session['user']) && ($session['user'] != @$user['id'])) ? $session['user'] : 0;
       if ($user['id'] && array_key_exists('pwd', $_POST)) {
         // existing user, check password
         if (($user['status'] == 'ok') && $utils->pwdVerify(@$_POST['pwd'], $user)) {
@@ -71,49 +73,8 @@ if (!count($errors)) {
 
           // Log user in - update session key for that, see https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines#Login
           $utils->log('login', 'user: '.$user['id']);
-          $sesskey = $utils->createSessionKey();
-          setcookie('sessionkey', $sesskey, 0, "", "", !$utils->running_on_localhost, true); // Last two params are secure and httponly, secure is not set on localhost.
-          // If the session has a redirect set, make sure it's performed.
-          if (strlen(@$session['saved_redirect'])) {
-            header('Location: '.$utils->getDomainBaseURL().$session['saved_redirect']);
-            // Remove redirect.
-            $result = $db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
-            if (!$result->execute(array(':redir' => '', ':sessid' => $session['id']))) {
-              $utils->log('redir_save_failure', 'session: '.$session['id'].', redirect: (empty)');
-            }
-          }
-          // If the session has a user set, create a new one - otherwise take existing session entry.
-          if (intval($session['user'])) {
-            $result = $db->prepare('INSERT INTO `auth_sessions` (`sesskey`, `time_expire`, `user`, `logged_in`) VALUES (:sesskey, :expire, :userid, TRUE);');
-            $result->execute(array(':sesskey' => $sesskey, ':userid' => $user['id'], ':expire' => gmdate('Y-m-d H:i:s', strtotime('+1 day'))));
-            // After insert, actually fetch the session row from the DB so we have all values.
-            $result = $db->prepare('SELECT * FROM auth_sessions WHERE `sesskey` = :sesskey AND `time_expire` > :expire;');
-            $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s')));
-            $row = $result->fetch(PDO::FETCH_ASSOC);
-            if ($row) {
-              $session = $row;
-            }
-            else {
-              $utils->log('create_session_failure', 'at login, prev session: '.$session['id'].', new user: '.$user['id']);
-              $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
-            }
-          }
-          else {
-            $result = $db->prepare('UPDATE `auth_sessions` SET `sesskey` = :sesskey, `user` = :userid, `logged_in` = TRUE, `time_expire` = :expire WHERE `id` = :sessid;');
-            if (!$result->execute(array(':sesskey' => $sesskey, ':userid' => $user['id'], ':expire' => gmdate('Y-m-d H:i:s', strtotime('+1 day')), ':sessid' => $session['id']))) {
-              $utils->log('login_failure', 'session: '.$session['id'].', user: '.$user['id']);
-              $errors[] = _('Login failed unexpectedly. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
-            }
-            else {
-              // After update, actually fetch the session row from the DB so we have all values.
-              $result = $db->prepare('SELECT * FROM auth_sessions WHERE `sesskey` = :sesskey AND `time_expire` > :expire;');
-              $result->execute(array(':sesskey' => $sesskey, ':expire' => gmdate('Y-m-d H:i:s')));
-              $row = $result->fetch(PDO::FETCH_ASSOC);
-              if ($row) {
-                $session = $row;
-              }
-            }
-          }
+          $prev_session = $session;
+          $session = $utils->getLoginSession($user['id'], $session);
           // If a verify_hash if set on a verified user, a password reset had been requested. As a login works right now, cancel that reset request by deleting the hash.
           if (strlen(@$user['verify_hash'])) {
             $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = \'\' WHERE `id` = :userid;');
@@ -124,6 +85,7 @@ if (!count($errors)) {
               $user['verify_hash'] = '';
             }
           }
+          $utils->doRedirectIfSet($prev_session);
         }
         else {
           $errors[] = _('This password is invalid or your email is not verified yet. Did you type them correctly?');
@@ -141,7 +103,7 @@ if (!count($errors)) {
             $vcode = $utils->createVerificationCode();
             $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
             if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
-              $utils->log('user_insert_failure', 'email: '.$_POST['email']);
+              $utils->log('user_insert_failure', 'email: '.$_POST['email'].' - '.$result->errorInfo()[2]);
               $errors[] = _('Could not add user. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
             }
             $user = array('id' => $db->lastInsertId(),
@@ -216,6 +178,31 @@ if (!count($errors)) {
               }
             }
           }
+        }
+      }
+      if (!count($errors) && ($addgroup > 0)) {
+        // We should add the login email to the group of that existing user.
+        $result = $db->prepare('SELECT `group_id` FROM `auth_users` WHERE `id` = :userid;');
+        $result->execute(array(':userid' => $addgroup));
+        $grpuser = $result->fetch(PDO::FETCH_ASSOC);
+        if (!intval($grpuser['group_id'])) {
+          // If that user doesn't have a group, put him into a group with his own user ID.
+          $result = $db->prepare('UPDATE `auth_users` SET `group_id` = :groupid WHERE `id` = :userid;');
+          if (!$result->execute(array(':groupid' => $addgroup, ':userid' => $addgroup))) {
+            $utils->log('group_save_failure', 'user: '.$addgroup);
+          }
+          else {
+            $utils->log('new grouping', 'user: '.$addgroup.', group: '.$addgroup);
+          }
+        }
+        // Save grouping for the new or logged-in user.
+        $result = $db->prepare('UPDATE `auth_users` SET `group_id` = :groupid WHERE `id` = :userid;');
+        if (!$result->execute(array(':groupid' => $addgroup, ':userid' => $user['id']))) {
+          $utils->log('group_save_failure', 'user: '.$user['id']);
+        }
+        else {
+          $utils->log('new grouping', 'user: '.$user['id'].', group: '.$addgroup);
+          $user['group_id'] = $addgroup;
         }
       }
     }
@@ -324,7 +311,7 @@ if (!count($errors)) {
     }
   }
   elseif (intval($session['user'])) {
-    $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `id` = :userid;');
+    $result = $db->prepare('SELECT `id`,`email`,`verify_hash`,`group_id` FROM `auth_users` WHERE `id` = :userid;');
     $result->execute(array(':userid' => $session['user']));
     $user = $result->fetch(PDO::FETCH_ASSOC);
     if (!$user['id']) {
@@ -356,6 +343,9 @@ if (!count($errors)) {
           $pagetype = 'reset_done';
         }
       }
+    }
+    else {
+      $utils->doRedirectIfSet($session);
     }
   }
 }
@@ -469,19 +459,26 @@ if (!count($errors)) {
     $para->setAttribute('class', 'toplink');
     $link = $para->appendLink('./', _('Back to top'));
   }
-  elseif ($session['logged_in']) {
+  elseif ($session['logged_in'] && (!array_key_exists('addemail', $_GET))) {
     if ($pagetype == 'reset_done') {
       $para = $body->appendElement('p', _('Your password has successfully been reset.'));
       $para->setAttribute('class', 'resetinfo done');
     }
     $div = $body->appendElement('div', $user['email']);
     $div->setAttribute('class', 'loginheader');
+    $groupmails = $utils->getGroupedEmails($user['group_id'], $user['email']);
+    if (count($groupmails)) {
+      $para = $div->appendElement('p', _('Grouped with: ').implode(', ', $groupmails));
+      $para->setAttribute('class', 'small groupmails');
+    }
     $div = $body->appendElement('div');
     $div->setAttribute('class', 'loginlinks');
     $ulist = $div->appendElement('ul');
     $ulist->setAttribute('class', 'flat');
     $litem = $ulist->appendElement('li');
     $link = $litem->appendLink('./?logout', _('Log out'));
+    $litem = $ulist->appendElement('li');
+    $link = $litem->appendLink('./?addemail', _('Add another email address'));
     if (in_array($user['email'], $utils->client_reg_email_whitelist)) {
       $litem = $ulist->appendElement('li');
       $link = $litem->appendLink('./?clients', _('Manage OAuth2 clients'));
@@ -490,6 +487,7 @@ if (!count($errors)) {
     $litem->appendLink('./?reset', _('Set new password'));
   }
   else { // not logged in
+    $addfields = array();
     if ($pagetype == 'verification_done') {
       $para = $body->appendElement('p', _('Hooray! Your email was successfully confirmed! You can log in now.'));
       $para->setAttribute('class', 'verifyinfo done');
@@ -498,7 +496,12 @@ if (!count($errors)) {
       $para = $body->appendElement('p', _('Your password has successfully been reset. You can log in now with the new password.'));
       $para->setAttribute('class', 'resetinfo done');
     }
-    $utils->appendLoginForm($body, $session, $user);
+    elseif (array_key_exists('addemail', $_GET)) {
+      $para = $body->appendElement('p', sprintf(_('Add another email grouped with %s by either logging in with it or specifying the email and a new password to use.'), $user['email']));
+      $para->setAttribute('class', 'addemailinfo');
+      $addfields['grouptoexisting'] = '1';
+    }
+    $utils->appendLoginForm($body, $session, $user, $addfields);
   }
 }
 

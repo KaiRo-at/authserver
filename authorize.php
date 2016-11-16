@@ -70,7 +70,9 @@ if (!count($errors)) {
 
       $form = $body->appendForm('', 'POST', 'authform');
       $form->setAttribute('id', 'authform');
-      $form->appendElement('p', sprintf(_('Do you authorize %s to access %s?'), $request->query['client_id'], $request->query['scope']));
+      $domain_name = parse_url($request->query['redirect_uri'], PHP_URL_HOST);
+      if (!strlen($domain_name)) { $domain_name = $request->query['client_id']; }
+      $form->appendElement('p', sprintf(_('Do you authorize %s to access %s?'), $domain_name, $request->query['scope']));
       $submit = $form->appendInputSubmit(_('yes'));
       $submit->setAttribute('name', 'authorized');
       $form->appendText(' ');
@@ -79,7 +81,9 @@ if (!count($errors)) {
     }
     elseif (empty($_POST) && (@$request->query['scope'] == 'email')) {
       // Display an interstitial page for a login  when we have email scope (verified email for logging in).
-      $para = $body->appendElement('p', sprintf(_('Sign in to %s using…'), $request->query['client_id'])); // XXX: put domain name from redirect URI on there instead
+      $domain_name = parse_url($request->query['redirect_uri'], PHP_URL_HOST);
+      if (!strlen($domain_name)) { $domain_name = $request->query['client_id']; }
+      $para = $body->appendElement('p', sprintf(_('Sign in to %s using…'), $domain_name));
       $para->setAttribute('class', 'signinwelcome');
       $form = $body->appendForm('', 'POST', 'loginauthform');
       $form->setAttribute('id', 'loginauthform');

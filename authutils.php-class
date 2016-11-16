@@ -384,12 +384,14 @@ class AuthUtils {
     $inptxt->setAttribute('class', 'login');
     $litem = $ulist->appendElement('li');
     $litem->appendLink('./?reset', _('Forgot password?'));
+    /*
     $litem = $ulist->appendElement('li');
     $cbox = $litem->appendInputCheckbox('remember', 'login_remember', 'true', false);
     $cbox->setAttribute('class', 'logincheck');
     $label = $litem->appendLabel('login_remember', _('Remember me'));
     $label->setAttribute('id', 'rememprompt');
     $label->setAttribute('class', 'loginprompt');
+    */
     $litem = $ulist->appendElement('li');
     $litem->appendInputHidden('tcode', $this->createTimeCode($session));
     foreach ($addfields as $fname => $fvalue) {

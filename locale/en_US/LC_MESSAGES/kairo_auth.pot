@@ -1,0 +1,310 @@
+# L10n strings for the KaiRo.at authentication system.
+# This Source Code Form is subject to the terms of the Mozilla Public KaiRo.at
+# This file is distributed under the same license as the kairo-auth package.
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: kairo-auth \n"
+"Report-Msgid-Bugs-To: kairo@kairo.at\n"
+"POT-Creation-Date: 2016-11-18 18:07+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid ""
+"This login system does not work without JavaScript. Please activate "
+"JavaScript for this site to log in."
+msgstr ""
+
+msgid "Unexpected error while logging out."
+msgstr ""
+
+msgid "The session system is not working."
+msgstr ""
+
+msgid ""
+"Please <a href=\"https://www.kairo.at/contact\">contact KaiRo.at</a> and "
+"tell the team about this."
+msgstr ""
+
+#, php-format
+msgid "Hi %s!"
+msgstr ""
+
+#, php-format
+msgid "Do you authorize %s to access %s?"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+#, php-format
+msgid "Sign in to %s using…"
+msgstr ""
+
+msgid "Add another email address"
+msgstr ""
+
+msgid "This is not me"
+msgstr ""
+
+msgid "Sign in"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "You need to log in or register to continue."
+msgstr ""
+
+msgid "The following error was detected"
+msgstr ""
+
+msgid "The following errors were detected"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid ""
+"You are not accessing this site on a secure connection, so authentication "
+"doesn't work."
+msgstr ""
+
+msgid "Login failed unexpectedly."
+msgstr ""
+
+msgid ""
+"Password must not start or end with a whitespace character like a space."
+msgstr ""
+
+#, php-format
+msgid "Password too short (min. %s characters)."
+msgstr ""
+
+#, php-format
+msgid "Password too long (max. %s characters)."
+msgstr ""
+
+msgid "The passwort can not be equal to your email or any part of it."
+msgstr ""
+
+#, php-format
+msgid ""
+"Your password must use characters other than normal letters or contain least "
+"%s characters."
+msgstr ""
+
+#, php-format
+msgid "Your password cannot consist only of numbers."
+msgstr ""
+
+#, php-format
+msgid "Password does have to contain at least %s different characters."
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Forgot password?"
+msgstr ""
+
+msgid "Log in / Register"
+msgstr ""
+
+msgid "The email address is invalid."
+msgstr ""
+
+msgid ""
+"This password is invalid or your email is not verified yet. Did you type "
+"them correctly?"
+msgstr ""
+
+msgid "Could not add user."
+msgstr ""
+
+msgid "KaiRo.at Authentication Service"
+msgstr ""
+
+msgid "Welcome!"
+msgstr ""
+
+#, php-format
+msgid "This email address, %s, has been used for registration on \"%s\"."
+msgstr ""
+
+msgid ""
+"Please confirm that registration by clicking the following link (or calling "
+"it up in your browser):"
+msgstr ""
+
+msgid ""
+"With this confirmation, you accept that we handle your data for the purpose "
+"of logging you into other websites when you request that."
+msgstr ""
+
+msgid ""
+"Those websites will get to know your email address but not your password, "
+"which we store securely."
+msgstr ""
+
+msgid ""
+"If you do not call this confirmation link within 72 hours, your data will be "
+"deleted from our database."
+msgstr ""
+
+#, php-format
+msgid "The %s team"
+msgstr ""
+
+msgid "The confirmation email could not be sent to you."
+msgstr ""
+
+msgid "Could not initiate reset request."
+msgstr ""
+
+msgid "Hi,"
+msgstr ""
+
+#, php-format
+msgid ""
+"A request for setting a new password for this email address, %s, has been "
+"submitted on \"%s\"."
+msgstr ""
+
+msgid ""
+"You can set a new password by clicking the following link (or calling it up "
+"in your browser):"
+msgstr ""
+
+msgid ""
+"If you do not call this confirmation link within 1 hour, this link expires "
+"and the existing password is being kept in place."
+msgstr ""
+
+msgid "The email with password reset instructions could not be sent to you."
+msgstr ""
+
+msgid ""
+"The form you used was not valid. Possibly it has expired and you need to "
+"initiate the action again, or you have disabled cookies for this site."
+msgstr ""
+
+msgid "Could not save confirmation."
+msgstr ""
+
+msgid ""
+"The confirmation link you called is not valid. Possibly it has expired and "
+"you need to try registering again."
+msgstr ""
+
+msgid ""
+"The password reset link you called is not valid. Possibly it has expired and "
+"you need to call the \"Password forgotten?\" function again."
+msgstr ""
+
+msgid "Unexpectedly failed to save new client information."
+msgstr ""
+
+msgid "This function is only available if you are logged in."
+msgstr ""
+
+msgid ""
+"Password reset failed. The reset form you used was not valid. Possibly it "
+"has expired and you need to initiate the password reset again."
+msgstr ""
+
+msgid "Password reset failed."
+msgstr ""
+
+#, php-format
+msgid ""
+"An email for confirmation has been sent to %s. Please follow the link "
+"provided there to complete the process."
+msgstr ""
+
+msgid "Reload this page after you confirm to continue."
+msgstr ""
+
+msgid "Reload"
+msgstr ""
+
+msgid ""
+"An email has been sent to the requested account with further information. If "
+"you do not receive an email then please confirm you have entered the same "
+"email address used during account registration."
+msgstr ""
+
+msgid "Back to top"
+msgstr ""
+
+msgid ""
+"If you forgot your password or didn't receive the registration confirmation, "
+"please enter your email here."
+msgstr ""
+
+msgid "Send instructions to email"
+msgstr ""
+
+#, php-format
+msgid "You can set a new password for %s here."
+msgstr ""
+
+msgid "Save password"
+msgstr ""
+
+msgid "Client ID"
+msgstr ""
+
+msgid "Client Secrect"
+msgstr ""
+
+msgid "Redirect URI"
+msgstr ""
+
+msgid "Scope"
+msgstr ""
+
+msgid "Create"
+msgstr ""
+
+msgid "Your password has successfully been reset."
+msgstr ""
+
+msgid "Grouped with: "
+msgstr ""
+
+msgid "Log out"
+msgstr ""
+
+msgid "Manage OAuth2 clients"
+msgstr ""
+
+msgid "Set new password"
+msgstr ""
+
+msgid "Hooray! Your email was successfully confirmed! You can log in now."
+msgstr ""
+
+msgid ""
+"Your password has successfully been reset. You can log in now with the new "
+"password."
+msgstr ""
+
+#, php-format
+msgid ""
+"Add another email grouped with %s by either logging in with it or specifying "
+"the email and a new password to use."
+msgstr ""

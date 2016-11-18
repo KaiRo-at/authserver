@@ -1,0 +1,31 @@
+#!/bin/bash
+
+LOCALEDIR="$( dirname $0 )"
+
+xgettext $LOCALEDIR/../app/*.php* -o kairo_auth.pot -p $LOCALEDIR/en_US/LC_MESSAGES -L PHP --no-location --from-code=utf-8 --foreign-user --package-name="kairo-auth" --package-version="" --copyright-holder="KaiRo.at" --msgid-bugs-address="kairo@kairo.at"
+echo "Strings extracted into kairo_auth.pot."
+
+replace "# SOME DESCRIPTIVE TITLE." "# L10n strings for the KaiRo.at authentication system." \
+        "# Copyright (C) YEAR" "# This Source Code Form is subject to the terms of the Mozilla Public" \
+        "# This file is distributed under the same license as the PACKAGE package." "# License, v. 2.0. If a copy of the MPL was not distributed with this file," \
+        "# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR." "# You can obtain one at http://mozilla.org/MPL/2.0/." \
+        "Language: \\\n" "Language: en_US\\n" -- $LOCALEDIR/en_US/LC_MESSAGES/kairo_auth.pot
+
+for localesub in $LOCALEDIR/*; do
+  if [ -d $localesub ]; then
+    LOCALE="$( basename $localesub )"
+    if [ "$LOCALE" != "en_US" ]; then
+      if [ ! -e "$LOCALEDIR/$LOCALE/LC_MESSAGES" ]; then
+        mkdir $LOCALEDIR/$LOCALE/LC_MESSAGES
+      fi
+      if [ -e "$LOCALEDIR/$LOCALE/LC_MESSAGES/kairo_auth.po" ]; then
+        echo "Merging $LOCALE..."
+        msgmerge $LOCALEDIR/$LOCALE/LC_MESSAGES/kairo_auth.po $LOCALEDIR/en_US/LC_MESSAGES/kairo_auth.pot --update --no-location
+      else
+        echo "Creating $LOCALE as a copy of en_US template..."
+        cp -a $LOCALEDIR/en_US/LC_MESSAGES/kairo_auth.pot $LOCALEDIR/$LOCALE/LC_MESSAGES/kairo_auth.po
+        replace "Language: en_US" "Language: $LOCALE" "MIME-Version: 1.0" "X-Source-Language: en_US" -- $LOCALEDIR/$LOCALE/LC_MESSAGES/kairo_auth.po
+      fi
+    fi
+  fi
+done

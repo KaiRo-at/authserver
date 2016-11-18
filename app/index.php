@@ -34,7 +34,7 @@ if (!count($errors)) {
   $user = array('id' => 0, 'email' => '');
   $pagetype = 'default';
   if (is_null($session)) {
-    $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+    $errors[] = _('The session system is not working.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
   }
   elseif (array_key_exists('logout', $_GET)) {
     $result = $db->prepare('UPDATE `auth_sessions` SET `logged_in` = FALSE WHERE `id` = :sessid;');
@@ -104,7 +104,7 @@ if (!count($errors)) {
             $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
             if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
               $utils->log('user_insert_failure', 'email: '.$_POST['email'].' - '.$result->errorInfo()[2]);
-              $errors[] = _('Could not add user. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+              $errors[] = _('Could not add user.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
             }
             $user = array('id' => $db->lastInsertId(),
                           'email' => $_POST['email'],
@@ -138,7 +138,7 @@ if (!count($errors)) {
             }
             else {
               $utils->log('verify_mail_failure', 'user: '.$user['id'].', email: '.$user['email']);
-              $errors[] = _('The confirmation email could not be sent to you. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+              $errors[] = _('The confirmation email could not be sent to you.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
             }
           }
           else {
@@ -147,7 +147,7 @@ if (!count($errors)) {
             $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
             if (!$result->execute(array(':vcode' => $vcode, ':userid' => $user['id']))) {
               $utils->log('vhash_set_failure', 'user: '.$user['id']);
-              $errors[] = _('Could not initiate reset request. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+              $errors[] = _('Could not initiate reset request.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
             }
             else {
               $utils->log('pwd_reset_request', 'user: '.$user['id'].', email: '.$user['email']);
@@ -174,7 +174,7 @@ if (!count($errors)) {
               }
               else {
                 $utils->log('pwd_reset_mail_failure', 'user: '.$user['id'].', email: '.$user['email']);
-                $errors[] = _('The email with password reset instructions could not be sent to you. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+                $errors[] = _('The email with password reset instructions could not be sent to you.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
               }
             }
           }
@@ -233,7 +233,7 @@ if (!count($errors)) {
       $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = \'\', `status` = \'ok\' WHERE `id` = :userid;');
       if (!$result->execute(array(':userid' => $user['id']))) {
         $utils->log('verification_save_failure', 'user: '.$user['id']);
-        $errors[] = _('Could not save confirmation. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+        $errors[] = _('Could not save confirmation.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
       }
       $pagetype = 'verification_done';
     }
@@ -294,7 +294,7 @@ if (!count($errors)) {
                                     ':scope' => $scope,
                                     ':userid' => $user['id']))) {
           $utils->log('client_save_failure', 'client: '.$clientid);
-          $errors[] = 'Unexpectedly failed to save new client information. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.';
+          $errors[] = _('Unexpectedly failed to save new client information.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
         }
       }
       if (!count($errors)) {
@@ -337,7 +337,7 @@ if (!count($errors)) {
         $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash, `verify_hash` = \'\' WHERE `id` = :userid;');
         if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $session['user']))) {
           $utils->log('pwd_reset_failure', 'user: '.$session['user']);
-          $errors[] = _('Password reset failed. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+          $errors[] = _('Password reset failed.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
         }
         else {
           $pagetype = 'reset_done';

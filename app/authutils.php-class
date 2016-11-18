@@ -195,14 +195,14 @@ class AuthUtils {
       }
       else {
         $utils->log('create_session_failure', 'at login, prev session: '.$session['id'].', new user: '.$userid);
-        $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+        $errors[] = _('The session system is not working.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
       }
     }
     else {
       $result = $this->db->prepare('UPDATE `auth_sessions` SET `sesskey` = :sesskey, `user` = :userid, `logged_in` = TRUE, `time_expire` = :expire WHERE `id` = :sessid;');
       if (!$result->execute(array(':sesskey' => $sesskey, ':userid' => $userid, ':expire' => gmdate('Y-m-d H:i:s', strtotime('+1 day')), ':sessid' => $session['id']))) {
         $utils->log('login_failure', 'session: '.$session['id'].', user: '.$userid);
-        $errors[] = _('Login failed unexpectedly. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+        $errors[] = _('Login failed unexpectedly.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
       }
       else {
         // After update, actually fetch the session row from the DB so we have all values.
@@ -359,7 +359,7 @@ class AuthUtils {
   function negotiateLocale($supportedLanguages) {
     $nlocale = $supportedLanguages[0];
     $headers = getAllHeaders();
-    $accLcomp = explode(',', $headers['Accept-Language']);
+    $accLcomp = explode(',', @$headers['Accept-Language']);
     $accLang = array();
     foreach ($accLcomp as $lcomp) {
       if (strlen($lcomp)) {

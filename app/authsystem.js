@@ -27,7 +27,7 @@ window.onload = function() {
   if (cancelAuth) {
     cancelAuth.onclick = function() {
       document.getElementById("isauthorized").value = "no";
-      document.getElementById("loginauthform").submit();
+      document.getElementById("authform").submit();
     }
   }
   var addAnotherEmail = document.getElementById("addanotheremail");

@@ -50,7 +50,7 @@ if (!count($errors)) {
     $user = array('id' => 0, 'email' => '');
   }
   if (is_null($session)) {
-    $errors[] = _('The session system is not working. Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+    $errors[] = _('The session system is not working.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
   }
   elseif ($session['logged_in']) {
     // We are logged in, process authorization request.
@@ -73,11 +73,12 @@ if (!count($errors)) {
       $domain_name = parse_url($request->query['redirect_uri'], PHP_URL_HOST);
       if (!strlen($domain_name)) { $domain_name = $request->query['client_id']; }
       $form->appendElement('p', sprintf(_('Do you authorize %s to access %s?'), $domain_name, $request->query['scope']));
-      $submit = $form->appendInputSubmit(_('yes'));
-      $submit->setAttribute('name', 'authorized');
+      $authinput = $form->appendInputHidden('authorized', 'yes');
+      $authinput->setAttribute('id', 'isauthorized');
+      $submit = $form->appendInputSubmit(_('Yes'));
       $form->appendText(' ');
-      $submit = $form->appendInputSubmit(_('no'));
-      $submit->setAttribute('name', 'authorized');
+      $button = $form->appendButton(_('No'));
+      $button->setAttribute('id', 'cancelauth');
     }
     elseif (empty($_POST) && (@$request->query['scope'] == 'email')) {
       // Display an interstitial page for a login  when we have email scope (verified email for logging in).
@@ -85,8 +86,8 @@ if (!count($errors)) {
       if (!strlen($domain_name)) { $domain_name = $request->query['client_id']; }
       $para = $body->appendElement('p', sprintf(_('Sign in to %s using…'), $domain_name));
       $para->setAttribute('class', 'signinwelcome');
-      $form = $body->appendForm('', 'POST', 'loginauthform');
-      $form->setAttribute('id', 'loginauthform');
+      $form = $body->appendForm('', 'POST', 'authform');
+      $form->setAttribute('id', 'authform');
       $form->setAttribute('class', 'loginarea');
       $ulist = $form->appendElement('ul');
       $ulist->setAttribute('class', 'flat emaillist');

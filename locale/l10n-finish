@@ -1,0 +1,18 @@
+#!/bin/bash
+
+LOCALEDIR="$( dirname $0 )"
+
+if [ -n "$1" -a -e "$LOCALEDIR/$1" ]; then
+  msgfmt $LOCALEDIR/$1/LC_MESSAGES/kairo_auth.po -o $LOCALEDIR/$1/LC_MESSAGES/kairo_auth.mo
+else
+  echo "You have to specify a local code to finish."
+  echo "Accepted locales:"
+  for localesub in $LOCALEDIR/*; do
+    if [ -d $localesub ]; then
+      LOCALE="$( basename $localesub )"
+      if [ "$LOCALE" != "en_US" ]; then
+        echo " $LOCALE"
+      fi
+    fi
+  done
+fi

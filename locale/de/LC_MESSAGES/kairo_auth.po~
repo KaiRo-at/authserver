@@ -1,0 +1,369 @@
+# L10n strings for the KaiRo.at authentication system.
+# This Source Code Form is subject to the terms of the Mozilla Public KaiRo.at
+# This file is distributed under the same license as the kairo-auth package.
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: kairo-auth\n"
+"Report-Msgid-Bugs-To: kairo@kairo.at\n"
+"POT-Creation-Date: 2016-11-18 16:53+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Source-Language: en_US\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Language: de\n"
+
+msgid ""
+"This login system does not work without JavaScript. Please activate "
+"JavaScript for this site to log in."
+msgstr ""
+"Dieses Login-System functioniert nicht ohne JavaScript. Bitte aktivieren Sie "
+"JavaScript für diese Seite, um sich anzumelden."
+
+msgid "Unexpected error while logging out."
+msgstr "Unerwarteter Fehler beim Abmelden."
+
+msgid "The session system is not working."
+msgstr "Das Sitzungssystem funktioniert nicht."
+
+msgid ""
+"Please <a href=\"https://www.kairo.at/contact\">contact KaiRo.at</a> and "
+"tell the team about this."
+msgstr ""
+"Bitte <a href=\"https://www.kairo.at/contact\">kontaktieren Sie KaiRo.at</a> "
+"und benachrichtigen Sie das Team darüber."
+
+#, php-format
+msgid "Hi %s!"
+msgstr "Hallo %s!"
+
+#, php-format
+msgid "Do you authorize %s to access %s?"
+msgstr "Erlauben Sie %s den Zugriff auf %s?"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "No"
+msgstr "Nein"
+
+#, php-format
+msgid "Sign in to %s using…"
+msgstr "Bei %s anmelden mit…"
+
+msgid "Add another email address"
+msgstr "Weitere E-Mail-Adresse hinzufügen"
+
+msgid "This is not me"
+msgstr "Das bin nicht ich"
+
+msgid "Sign in"
+msgstr "Anmelden"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "You need to log in or register to continue."
+msgstr "Sie müssen sich anmelden oder registrieren, um fortzusetzen."
+
+msgid "The following error was detected"
+msgstr "Der folgende Fehler ist aufgetreten"
+
+msgid "The following errors were detected"
+msgstr "Die folgenden Fehler sind aufgetreten"
+
+msgid "Back"
+msgstr "Zurück"
+
+msgid ""
+"You are not accessing this site on a secure connection, so authentication "
+"doesn't work."
+msgstr ""
+"Sie greifen auf diese Website nicht über eine sichere Verbindung zu, daher "
+"funktioniert die Anmeldung nicht."
+
+msgid "Login failed unexpectedly."
+msgstr "Anmeldung unerwartet fehlgeschlagen."
+
+msgid ""
+"Password must not start or end with a whitespace character like a space."
+msgstr ""
+"Das Passwort darf nicht mit unsichtbaren Zeichen wie Leerzeichen beginnen "
+"oder enden."
+
+#, php-format
+msgid "Password too short (min. %s characters)."
+msgstr "Passwort zu kurz (min. %s Zeichen)."
+
+#, php-format
+msgid "Password too long (max. %s characters)."
+msgstr "Passwort zu lang (max. %s Zeichen)."
+
+msgid "The passwort can not be equal to your email or any part of it."
+msgstr "Das Passwort darf nicht deine E-Mail-Adresse oder ein Teil davon sein."
+
+#, php-format
+msgid ""
+"Your password must use characters other than normal letters or contain least "
+"%s characters."
+msgstr ""
+"Das Passwort muss Zeichen außerhalb der normalen Buchstaben enthalten oder "
+"mindestens %s Zeichen lang sein."
+
+#, php-format
+msgid "Your password cannot consist only of numbers."
+msgstr "Das Passwort darf nicht nur aus Zahlen bestehen."
+
+#, php-format
+msgid "Password does have to contain at least %s different characters."
+msgstr "Das Passwort muss zumindest %s verschiedene Zeichen enthalten."
+
+msgid "Email"
+msgstr "E-Mail"
+
+msgid "Password"
+msgstr "Passwort"
+
+msgid "Forgot password?"
+msgstr "Passwort vergessen?"
+
+msgid "Log in / Register"
+msgstr "Anmelden / Registrieren"
+
+msgid "The email address is invalid."
+msgstr "Die E-Mail-Adresse ist ungültig."
+
+msgid ""
+"This password is invalid or your email is not verified yet. Did you type "
+"them correctly?"
+msgstr ""
+"Das Passwort ist ungültig oder Ihre E-Mail_Adresse ist noch nicht "
+"verifiziert. Haben Sie diese korrekt eingegeben?"
+
+msgid "Could not add user."
+msgstr "Benutzer konnte nicht hinzugefügt werden."
+
+msgid "KaiRo.at Authentication Service"
+msgstr "KaiRo.at Authentication Service"
+
+msgid "Welcome!"
+msgstr "Willkommen!"
+
+#, php-format
+msgid "This email address, %s, has been used for registration on \"%s\"."
+msgstr ""
+"Diese E-Mail-Adresse, %s, wurde zur Registrierung auf \"%s\" verwendet."
+
+msgid ""
+"Please confirm that registration by clicking the following link (or calling "
+"it up in your browser):"
+msgstr ""
+"Bitte bestätigen Sie diese Registrierung durch Klicken auf den folgenden "
+"Link (oder Aufruf der Adresse in Ihrem Browser):"
+
+msgid ""
+"With this confirmation, you accept that we handle your data for the purpose "
+"of logging you into other websites when you request that."
+msgstr ""
+"Mit dieser Bestätigung stimmen Sie zu, dass wir Ihre Daten zum Zweck Ihrer "
+"Anmeldung auf anderen Websites verwenden, wenn Sie solche Anmeldungen "
+"initiieren. "
+
+msgid ""
+"Those websites will get to know your email address but not your password, "
+"which we store securely."
+msgstr ""
+"Diesen Websiteswird Ihre E-Mail-Adresse weitergeleitet, aber nicht Ihre "
+"Passwort, das wir sicher speichern. "
+
+msgid ""
+"If you do not call this confirmation link within 72 hours, your data will be "
+"deleted from our database."
+msgstr ""
+"Wenn Sie diesen Bestätigungslink nicht innerhalb von 72 Stunden aufrufen, "
+"werden Ihre Daten aus unserer Datenbank gelöscht."
+
+#, php-format
+msgid "The %s team"
+msgstr "Das %s-Team"
+
+msgid "The confirmation email could not be sent to you."
+msgstr "Die Bestätigungs-E-Mail konnte nicht an Sie gesendet werden."
+
+msgid "Could not initiate reset request."
+msgstr "Anfrage zum Zurücksetzen konnte nicht initiiert werden."
+
+msgid "Hi,"
+msgstr "Hallo,"
+
+#, php-format
+msgid ""
+"A request for setting a new password for this email address, %s, has been "
+"submitted on \"%s\"."
+msgstr ""
+"Eine Anfrage zum Setzen eines neuen Passwortes für diese E-Mail-Adresse, %s, "
+"wurde auf \"%s\" abgeschickt."
+
+msgid ""
+"You can set a new password by clicking the following link (or calling it up "
+"in your browser):"
+msgstr ""
+"Sie können ein neues Passwort setzen, indem Sie auf den folgenden Link "
+"klicken (oder die Adresse in Ihrem Browser aufrufen):"
+
+msgid ""
+"If you do not call this confirmation link within 1 hour, this link expires "
+"and the existing password is being kept in place."
+msgstr ""
+"Wenn Sie diese Bestätigung nicht innerhalb einer Stunde aufrufen, erlischt "
+"dieser Link und das existente Passwort wird weiter verwendet. "
+
+msgid "The email with password reset instructions could not be sent to you."
+msgstr ""
+"Die E-Mail mit Anleitungen zum Zurücksetzen Ihres Passwortes konnte nicht an "
+"Sie gesendet werden."
+
+msgid ""
+"The form you used was not valid. Possibly it has expired and you need to "
+"initiate the action again, or you have disabled cookies for this site."
+msgstr ""
+"Das von Ihnen verwendete Formular war ungültig. Möglicherweise ist es "
+"erloschen und Sie müssen die Aktion nochmals beginnen, oder Sie haben "
+"Cookies für diese Website deaktiviert."
+
+msgid "Could not save confirmation."
+msgstr "Bestätigung konnte nicht gespeichert werden."
+
+msgid ""
+"The confirmation link you called is not valid. Possibly it has expired and "
+"you need to try registering again."
+msgstr ""
+"Der von Ihnen aufgerufene Bestätigungs-Link ist ungültig. Möglicherweise ist "
+"er erloschen und Sie müssen die Registrierung nochmals versuchen."
+
+msgid ""
+"The password reset link you called is not valid. Possibly it has expired and "
+"you need to call the \"Password forgotten?\" function again."
+msgstr ""
+"Der von Ihnen aufgerufene Passwort-Rücksetzungs-Link ist ungültig. "
+"Möglicherweise ist er erloschen und Sie müssen die Funktion \"Passwort "
+"vergessen?\" nochmals aufrufen."
+
+msgid "This function is only available if you are logged in."
+msgstr "Diese Funktion ist nur verfügbar, wenn Sie angemeldet sind."
+
+msgid ""
+"Password reset failed. The reset form you used was not valid. Possibly it "
+"has expired and you need to initiate the password reset again."
+msgstr ""
+"Zurücksetzen des Passworts fehlgeschlagen. Das von Ihnen verwendete "
+"Rücksetzungsformular war ungültig. Möglicherweise ist es erloschen und Sie "
+"müssen die Passwort-Rücksetzung nochmals beginnen."
+
+msgid "Password reset failed."
+msgstr "Zurücksetzen des Passworts fehlgeschlagen."
+
+#, php-format
+msgid ""
+"An email for confirmation has been sent to %s. Please follow the link "
+"provided there to complete the process."
+msgstr ""
+"Eine E-Mail zur Bestätigung wurde an %s gesendet. Bitte folgen Sie dem dort "
+"angegebenen Link, um den Vorgang abzuschließen."
+
+msgid "Reload this page after you confirm to continue."
+msgstr "Laden Sie diese Seite nach der Bestätigung neu, um fortzusetzen."
+
+msgid "Reload"
+msgstr "Neu laden"
+
+msgid ""
+"An email has been sent to the requested account with further information. If "
+"you do not receive an email then please confirm you have entered the same "
+"email address used during account registration."
+msgstr ""
+"Eine E-Mail mit weiteren Informationen wurde an das angefragte Konto "
+"verschickt. Wenn Sie keine E-Mail bekommen, überprüfen Sie bitte, dass Sie "
+"dieselbe E-Mail-Adresse verwendet haben, mit der Sie sich ursprünglich "
+"registriert haben."
+
+msgid "Back to top"
+msgstr "Zurück zur Hauptseite"
+
+msgid ""
+"If you forgot your password or didn't receive the registration confirmation, "
+"please enter your email here."
+msgstr ""
+"Wenn Sie Ihr Passwort vergessen haben oder die Registrierungsbestätigung "
+"nicht bekommen haben, gebenm Sie bitte Ihre E-Mail-Adresse hier ein."
+
+msgid "Send instructions to email"
+msgstr "Anleitungen per E-Mail senden"
+
+#, php-format
+msgid "You can set a new password for %s here."
+msgstr "Sie können hier ein neues Passwort für %s setzen."
+
+msgid "Save password"
+msgstr "Passwort speichern"
+
+msgid "Client ID"
+msgstr "Client-ID"
+
+msgid "Client Secrect"
+msgstr "Client-Secret"
+
+msgid "Redirect URI"
+msgstr "Redirect-URI"
+
+msgid "Scope"
+msgstr "Scope"
+
+msgid "Create"
+msgstr "Anlegen"
+
+msgid "Your password has successfully been reset."
+msgstr "Ihr Passwort wurde erfolgreich zurückgesetzt."
+
+msgid "Grouped with: "
+msgstr "Gruppiert mit:"
+
+msgid "Log out"
+msgstr "Abmelden"
+
+msgid "Manage OAuth2 clients"
+msgstr "OAuth2-Clients verwalten"
+
+msgid "Set new password"
+msgstr "Neues Passwort setzen"
+
+msgid "Hooray! Your email was successfully confirmed! You can log in now."
+msgstr ""
+"Hurra! Ihr E-Mail-Adresse wurde erfolgreich bestätigt! Sie können sich jetzt "
+"anmelden."
+
+msgid ""
+"Your password has successfully been reset. You can log in now with the new "
+"password."
+msgstr ""
+"Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit dem "
+"neuen Passwort anmelden."
+
+#, php-format
+msgid ""
+"Add another email grouped with %s by either logging in with it or specifying "
+"the email and a new password to use."
+msgstr ""
+"Fügen Sie eine neue E-Mail-Adresse in die Gruppe mit %s ein, indem Sie sich "
+"entweder damit anmelden oder die E-Mail-Adresse und ein neues Passwort dafür "
+"angeben."
+
+#~ msgid "no"
+#~ msgstr "Nein"

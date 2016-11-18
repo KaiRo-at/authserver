@@ -31,9 +31,16 @@ $db = new PDO($dbdata['dsn'], $dbdata['username'], $dbdata['password']);
 // Instantiate auth utils.
 $utils = new AuthUtils($settings, $db);
 
+// This is an array of locale tags in browser style mapping to unix system locale codes to use with gettext.
+$supported_locales = array(
+    'en-US' => 'en_US',
+    'de' => 'de_DE',
+);
+
 $textdomain = 'kairo_auth';
-$textlocale = $utils->negotiateLocale(array('en', 'de'));
-putenv('LC_ALL='.$textlocale);
+$textlocale = $utils->negotiateLocale(array_keys($supported_locales));
+putenv('LC_ALL='.$supported_locales[$textlocale]);
+$selectedlocale = setlocale(LC_ALL, $supported_locales[$textlocale]);
 bindtextdomain($textdomain, '../locale');
 bind_textdomain_codeset($textdomain, 'utf-8');
 textdomain($textdomain);

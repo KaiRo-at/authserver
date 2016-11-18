@@ -82,6 +82,9 @@ class AuthUtils {
   // function pwdNeedsRehash($user)
   //   Return true if the pwdhash field of the user uses an outdated standard and needs to be rehashed.
   //
+  // function negotiateLocale($supportedLanguages)
+  //   Return the language to use out of the given array of supported locales, via netotiation based on the HTTP Accept-Language header.
+  //
   // function getGroupedEmails($group_id, [$exclude_email])
   //   Return all emails grouped in the specified group ID, optionally exclude a specific email (e.g. because you only want non-current entries)
   //
@@ -351,6 +354,30 @@ class AuthUtils {
     else {
       return true;
     }
+  }
+
+  function negotiateLocale($supportedLanguages) {
+    $nlocale = $supportedLanguages[0];
+    $headers = getAllHeaders();
+    $accLcomp = explode(',', $headers['Accept-Language']);
+    $accLang = array();
+    foreach ($accLcomp as $lcomp) {
+      if (strlen($lcomp)) {
+        $ldef = explode(';', $lcomp);
+        $accLang[$ldef[0]] = (float)((strpos(@$ldef[1],'q=')===0)?substr($ldef[1],2):1);
+      }
+    }
+    if (count($accLang)) {
+      $pLang = ''; $pLang_q = 0;
+      foreach ($supportedLanguages as $wantedLang) {
+        if (isset($accLang[$wantedLang]) && ($accLang[$wantedLang] > $pLang_q)) {
+          $pLang = $wantedLang;
+          $pLang_q = $accLang[$wantedLang];
+        }
+      }
+      if (strlen($pLang)) { $nlocale = $pLang; }
+    }
+    return $nlocale;
   }
 
   function getGroupedEmails($group_id, $exclude_email = '') {

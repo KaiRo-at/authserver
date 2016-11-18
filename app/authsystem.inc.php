@@ -26,13 +26,17 @@ require_once('../kairo-utils/email.php-class');
 // Class for sending emails
 require_once(__DIR__.'/authutils.php-class');
 
-bindtextdomain('kairo_auth', 'en'); // XXX: Should negotiate locale.
-bind_textdomain_codeset('kairo_auth', 'utf-8');
-
 // Connect to our MySQL DB
 $db = new PDO($dbdata['dsn'], $dbdata['username'], $dbdata['password']);
 // Instantiate auth utils.
 $utils = new AuthUtils($settings, $db);
+
+$textdomain = 'kairo_auth';
+$textlocale = $utils->negotiateLocale(array('en', 'de'));
+putenv('LC_ALL='.$textlocale);
+bindtextdomain($textdomain, '../locale');
+bind_textdomain_codeset($textdomain, 'utf-8');
+textdomain($textdomain);
 
 /* Creating the DB tables:
 CREATE TABLE `auth_sessions` (

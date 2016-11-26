@@ -63,7 +63,9 @@ if (!count($errors)) {
       exit();
     }
 
-    if (empty($_POST) && (@$request->query['scope'] != 'email')) {
+    $is_authorized = !array_key_exists('authorized', $_POST) ? null : (@$_POST['authorized'] === 'yes');
+
+    if (is_null($is_authorized) && (@$request->query['scope'] != 'email')) {
       // Display an authorization form (unless the scope is email, which we handle as a login request below).
       $para = $body->appendElement('p', sprintf(_('Hi %s!'), $user['email']));
       $para->setAttribute('class', 'userwelcome');
@@ -80,41 +82,50 @@ if (!count($errors)) {
       $button = $form->appendButton(_('No'));
       $button->setAttribute('id', 'cancelauth');
     }
-    elseif (empty($_POST) && (@$request->query['scope'] == 'email')) {
+    elseif (@$request->query['scope'] == 'email') {
       // Display an interstitial page for a login  when we have email scope (verified email for logging in).
       $domain_name = parse_url($request->query['redirect_uri'], PHP_URL_HOST);
       if (!strlen($domain_name)) { $domain_name = $request->query['client_id']; }
-      $para = $body->appendElement('p', sprintf(_('Sign in to %s using…'), $domain_name));
-      $para->setAttribute('class', 'signinwelcome');
-      $form = $body->appendForm('', 'POST', 'authform');
-      $form->setAttribute('id', 'authform');
-      $form->setAttribute('class', 'loginarea');
-      $ulist = $form->appendElement('ul');
-      $ulist->setAttribute('class', 'flat emaillist');
-      $emails = $utils->getGroupedEmails($user['group_id']);
-      if (!count($emails)) { $emails = array($user['email']); }
-      foreach ($emails as $email) {
-        $litem = $ulist->appendElement('li');
-        $litem->appendInputRadio('user_email', 'uemail_'.md5($email), $email, $email == $user['email']);
-        $litem->appendLabel('uemail_'.md5($email), $email);
+      // If the referrer is from the auth system and we have a different domain to redirect to,
+      // we can safely assume we just logged in with that email and skip the interstitial page.
+      $refer_domain = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
+      if (is_null($is_authorized) && ($refer_domain == $_SERVER['SERVER_NAME']) && ($refer_domain != $domain_name) &&
+          (dirname($_SERVER['REQUEST_URI']) == dirname(parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH)))) {
+        $is_authorized = true;
       }
-      $para = $form->appendElement('p');
-      $para->setAttribute('class', 'small otheremaillinks');
-      $link = $para->appendLink('#', _('Add another email address'));
-      $link->setAttribute('id', 'addanotheremail'); // Makes the JS put the right functionality onto the link.
-      $para->appendText(' ');
-      $link = $para->appendLink('#', _('This is not me'));
-      $link->setAttribute('id', 'isnotme'); // Makes the JS put the right functionality onto the link.
-      $authinput = $form->appendInputHidden('authorized', 'yes');
-      $authinput->setAttribute('id', 'isauthorized');
-      $submit = $form->appendInputSubmit(_('Sign in'));
-      $para = $form->appendElement('p');
-      $para->setAttribute('class', 'small');
-      $link = $para->appendLink('#', _('Cancel'));
-      $link->setAttribute('id', 'cancelauth'); // Makes the JS put the right functionality onto the link.
-      $utils->setRedirect($session, $_SERVER['REQUEST_URI']);
+      if (is_null($is_authorized)) {
+        $para = $body->appendElement('p', sprintf(_('Sign in to %s using…'), $domain_name));
+        $para->setAttribute('class', 'signinwelcome');
+        $form = $body->appendForm('', 'POST', 'authform');
+        $form->setAttribute('id', 'authform');
+        $form->setAttribute('class', 'loginarea');
+        $ulist = $form->appendElement('ul');
+        $ulist->setAttribute('class', 'flat emaillist');
+        $emails = $utils->getGroupedEmails($user['group_id']);
+        if (!count($emails)) { $emails = array($user['email']); }
+        foreach ($emails as $email) {
+          $litem = $ulist->appendElement('li');
+          $litem->appendInputRadio('user_email', 'uemail_'.md5($email), $email, $email == $user['email']);
+          $litem->appendLabel('uemail_'.md5($email), $email);
+        }
+        $para = $form->appendElement('p');
+        $para->setAttribute('class', 'small otheremaillinks');
+        $link = $para->appendLink('#', _('Add another email address'));
+        $link->setAttribute('id', 'addanotheremail'); // Makes the JS put the right functionality onto the link.
+        $para->appendText(' ');
+        $link = $para->appendLink('#', _('This is not me'));
+        $link->setAttribute('id', 'isnotme'); // Makes the JS put the right functionality onto the link.
+        $authinput = $form->appendInputHidden('authorized', 'yes');
+        $authinput->setAttribute('id', 'isauthorized');
+        $submit = $form->appendInputSubmit(_('Sign in'));
+        $para = $form->appendElement('p');
+        $para->setAttribute('class', 'small');
+        $link = $para->appendLink('#', _('Cancel'));
+        $link->setAttribute('id', 'cancelauth'); // Makes the JS put the right functionality onto the link.
+        $utils->setRedirect($session, $_SERVER['REQUEST_URI']);
+      }
     }
-    else {
+    if (!is_null($is_authorized)) {
       // Switch to different user if we selected a different email within the group.
       if (strlen(@$_POST['user_email']) && ($_POST['user_email'] != $user['email'])) {
         $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash`,`group_id` FROM `auth_users` WHERE `group_id` = :groupid AND `email` = :email;');
@@ -126,7 +137,6 @@ if (!count($errors)) {
         }
       }
       // Handle authorize request, forwarding code in GET parameters if the user has authorized your client.
-      $is_authorized = (@$_POST['authorized'] === 'yes');
       $server->handleAuthorizeRequest($request, $response, $is_authorized, $user['id']);
       /* For testing only
       if ($is_authorized) {

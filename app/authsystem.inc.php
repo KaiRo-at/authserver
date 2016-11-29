@@ -20,9 +20,9 @@ $settings = json_decode(file_get_contents('/etc/kairo/auth_settings.json'), true
 if (!is_array($settings)) { trigger_error('Auth settings not found', E_USER_ERROR); }
 
 // Extended DOM document class
-require_once('../kairo-utils/document.php-class');
+require_once('../php-utility-classes/classes/document.php-class');
 // Class for sending emails
-require_once('../kairo-utils/email.php-class');
+require_once('../php-utility-classes/classes/email.php-class');
 // Class for sending emails
 require_once(__DIR__.'/authutils.php-class');
 

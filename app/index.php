@@ -6,28 +6,11 @@
 // Include the common auth system files (including the OAuth2 Server object).
 require_once(__DIR__.'/authsystem.inc.php');
 
-// Start HTML document as a DOM object.
-extract(ExtendedDocument::initHTML5()); // sets $document, $html, $head, $title, $body
-$document->formatOutput = true; // we want a nice output
-
-$style = $head->appendElement('link');
-$style->setAttribute('rel', 'stylesheet');
-$style->setAttribute('href', 'authsystem.css');
-$head->appendJSFile('authsystem.js');
-$title->appendText('KaiRo.at Authentication Server');
-$h1 = $body->appendElement('h1', 'KaiRo.at Authentication Server');
-
-// Make the document not be scaled on mobile devices.
-$vpmeta = $head->appendElement('meta');
-$vpmeta->setAttribute('name', 'viewport');
-$vpmeta->setAttribute('content', 'width=device-width, height=device-height');
-
 $errors = $utils->checkForSecureConnection();
 $utils->sendSecurityHeaders();
 
-$para = $body->appendElement('p', _('This login system does not work without JavaScript. Please activate JavaScript for this site to log in.'));
-$para->setAttribute('id', 'jswarning');
-$para->setAttribute('class', 'warn');
+// Initialize the HTML document with our basic elements.
+extract($utils->initHTMLDocument('KaiRo.at Authentication Server')); // sets $document, $html, $head, $title, $body
 
 if (!count($errors)) {
   $session = $utils->initSession(); // Read session or create new session and set cookie.

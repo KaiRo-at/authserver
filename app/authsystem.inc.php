@@ -45,6 +45,11 @@ bindtextdomain($textdomain, '../locale');
 bind_textdomain_codeset($textdomain, 'utf-8');
 textdomain($textdomain);
 
+// Sanitize settings.
+$settings['piwik_enabled'] = (@$settings['piwik_enabled']) ? true : false;
+$settings['piwik_site_id'] = intval(@$settings['piwik_site_id']);
+$settings['piwik_url'] = strlen($settings['piwik_url']) ? $settings['piwik_url'] : '/piwik/';
+
 /* Creating the DB tables:
 CREATE TABLE `auth_sessions` (
  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT ,

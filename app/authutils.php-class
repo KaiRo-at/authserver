@@ -88,6 +88,11 @@ class AuthUtils {
   // function getGroupedEmails($group_id, [$exclude_email])
   //   Return all emails grouped in the specified group ID, optionally exclude a specific email (e.g. because you only want non-current entries)
   //
+  // function initHTMLDocument($titletext, [$headlinetext]) {
+  //   initialize the HTML document for the auth system, with some elements we always use, esp. all the scripts and stylesheet.
+  //     Sets the title of the document to the given title, the main headline will be the same as the title if not set explicitly.
+  //     Returns an associative array with the following elements: 'document', 'html', 'head', 'title', 'body'.
+  //
   // function appendLoginForm($dom_element, $session, $user, [$addfields])
   //   Append a login form for the given session to the given DOM element, possibly prefilling the email from the given user info array.
   //     The optional $addfields parameter is an array of name=>value pairs of hidden fields to add to the form.
@@ -390,6 +395,49 @@ class AuthUtils {
       }
     }
     return $emails;
+  }
+
+  function initHTMLDocument($titletext, $headlinetext = null) {
+    global $settings;
+    if (is_null($headlinetext)) { $headlinetext = $titletext; }
+    // Start HTML document as a DOM object.
+    extract(ExtendedDocument::initHTML5()); // sets $document, $html, $head, $title, $body
+    $document->formatOutput = true; // we want a nice output
+
+    $style = $head->appendElement('link');
+    $style->setAttribute('rel', 'stylesheet');
+    $style->setAttribute('href', 'authsystem.css');
+    $head->appendJSFile('authsystem.js');
+    if ($settings['piwik_enabled']) {
+      $head->setAttribute('data-piwiksite', $settings['piwik_site_id']);
+      $head->setAttribute('data-piwikurl', $settings['piwik_url']);
+      $head->appendJSFile('piwik.js', true, true);
+    }
+    $title->appendText($titletext);
+    $h1 = $body->appendElement('h1', $headlinetext);
+
+    if ($settings['piwik_enabled']) {
+      // Piwik noscript element
+      $noscript = $body->appendElement('noscript');
+      $para = $noscript->appendElement('p');
+      $img = $para->appendImage($settings['piwik_url'].'piwik.php?idsite='.$settings['piwik_site_id']);
+      $img->setAttribute('style', 'border:0;');
+    }
+
+    // Make the document not be scaled on mobile devices.
+    $vpmeta = $head->appendElement('meta');
+    $vpmeta->setAttribute('name', 'viewport');
+    $vpmeta->setAttribute('content', 'width=device-width, height=device-height');
+
+    $para = $body->appendElement('p', _('This login system does not work without JavaScript. Please activate JavaScript for this site to log in.'));
+    $para->setAttribute('id', 'jswarning');
+    $para->setAttribute('class', 'warn');
+
+    return array('document' => $document,
+                 'html' => $html,
+                 'head' => $head,
+                 'title' => $title,
+                 'body' => $body);
   }
 
   function appendLoginForm($dom_element, $session, $user, $addfields = array()) {

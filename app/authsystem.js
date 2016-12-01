@@ -2,7 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-window.onload = function() {
+// Call initElements at the earliest possible stage after parsing the document.
+if (window.addEventListener) { window.addEventListener("DOMContentLoaded", initElements, false); }
+else { window.onload = initElements(); }
+
+function initElements() {
   var jsWarning = document.getElementById("jswarning");
   if (jsWarning) {
     if (jsWarning.classList) {

@@ -125,6 +125,13 @@ if (!count($errors)) {
           $session = $utils->getLoginSession($user['id'], $session);
         }
       }
+      if ($settings['piwik_enabled']) {
+        // If we do not send out an HTML file, we need to do the Piwik tracking ourselves.
+        require_once($settings['piwik_tracker_path'].'PiwikTracker.php');
+        PiwikTracker::$URL = ((strpos($settings['piwik_url'], '://') === false) ? 'http://localhost' : '' ).$settings['piwik_url'];
+        $piwikTracker = new PiwikTracker($idSite = $settings['piwik_site_id']);
+        $piwikTracker->doTrackPageView('Handle Authorize Request');
+      }
       // Handle authorize request, forwarding code in GET parameters if the user has authorized your client.
       $server->handleAuthorizeRequest($request, $response, $is_authorized, $user['id']);
       /* For testing only

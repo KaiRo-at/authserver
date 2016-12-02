@@ -9,6 +9,13 @@
 
 // Include the common auth system files (including the OAuth2 Server object).
 require_once(__DIR__.'/authsystem.inc.php');
+if ($settings['piwik_enabled']) {
+  // We do not send out an HTML file, so we need to do the Piwik tracking ourselves.
+  // Init is done here, actual tracking before exit.
+  require_once($settings['piwik_tracker_path'].'PiwikTracker.php');
+  PiwikTracker::$URL = ((strpos($settings['piwik_url'], '://') === false) ? 'http://localhost' : '' ).$settings['piwik_url'];
+  $piwikTracker = new PiwikTracker($idSite = $settings['piwik_site_id']);
+}
 
 $errors = $utils->checkForSecureConnection();
 $utils->sendSecurityHeaders();
@@ -18,6 +25,7 @@ if (!count($errors)) {
   $token_OK = $server->verifyResourceRequest(OAuth2\Request::createFromGlobals());
   if (!$token_OK) {
     $server->getResponse()->send();
+    if ($settings['piwik_enabled']) { $piwikTracker->doTrackPageView('API Request: Bad Token'); }
     exit();
   }
   $token = $server->getAccessTokenData(OAuth2\Request::createFromGlobals());
@@ -140,5 +148,8 @@ if (!count($errors)) {
 else {
   print(json_encode(array('error' => 'insecure_connection',
                           'error_description' => 'Your connection is insecure. The API can only be accessed on secure connections.')));
+}
+if ($settings['piwik_enabled']) {
+  $piwikTracker->doTrackPageView('API Request'.(strlen($token['scope'])?': '.$token['scope']:''));
 }
 ?>

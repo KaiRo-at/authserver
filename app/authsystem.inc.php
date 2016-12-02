@@ -48,7 +48,8 @@ textdomain($textdomain);
 // Sanitize settings.
 $settings['piwik_enabled'] = (@$settings['piwik_enabled']) ? true : false;
 $settings['piwik_site_id'] = intval(@$settings['piwik_site_id']);
-$settings['piwik_url'] = strlen($settings['piwik_url']) ? $settings['piwik_url'] : '/piwik/';
+$settings['piwik_url'] = strlen(@$settings['piwik_url']) ? $settings['piwik_url'] : '/piwik/';
+$settings['piwik_tracker_path'] = strlen(@$settings['piwik_tracker_path']) ? $settings['piwik_tracker_path'] : '../vendor/piwik/piwik-php-tracker/';
 
 /* Creating the DB tables:
 CREATE TABLE `auth_sessions` (

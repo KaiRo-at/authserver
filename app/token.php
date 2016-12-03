@@ -8,6 +8,13 @@
 
 // Include the common auth system files (including the OAuth2 Server object).
 require_once(__DIR__.'/authsystem.inc.php');
+if ($settings['piwik_enabled']) {
+  // We do not send out an HTML file, so we need to do the Piwik tracking ourselves.
+  require_once($settings['piwik_tracker_path'].'PiwikTracker.php');
+  PiwikTracker::$URL = ((strpos($settings['piwik_url'], '://') === false) ? 'http://localhost' : '' ).$settings['piwik_url'];
+  $piwikTracker = new PiwikTracker($idSite = $settings['piwik_site_id']);
+  $piwikTracker->doTrackPageView('Token Request');
+}
 
 $errors = $utils->checkForSecureConnection();
 

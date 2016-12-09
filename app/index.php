@@ -495,7 +495,8 @@ if (count($errors)) {
   $list = $body->appendElement('ul');
   $list->setAttribute('class', 'flat warn');
   foreach ($errors as $msg) {
-    $item = $list->appendElement('li', $msg);
+    $item = $list->appendElement('li');
+    $item->appendHTMLMarkup($msg);
   }
   $body->appendButton(_('Back'), 'history.back();');
 }

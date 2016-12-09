@@ -28,7 +28,7 @@ if (!count($errors)) {
     $session['logged_in'] = 0;
   }
   elseif (array_key_exists('email', $_POST)) {
-    if (!preg_match('/^[^@]+@[^@]+\.[^@]+$/', $_POST['email'])) {
+    if (!preg_match('/^[^@]+@([^@]+\.[^@]+|localhost)$/', $_POST['email'])) {
       $errors[] = _('The email address is invalid.');
     }
     elseif ($utils->verifyTimeCode(@$_POST['tcode'], $session)) {
@@ -195,7 +195,7 @@ if (!count($errors)) {
   }
   elseif (array_key_exists('reset', $_GET)) {
     if ($session['logged_in']) {
-      $result = $db->prepare('SELECT `id`,`email` FROM `auth_users` WHERE `id` = :userid;');
+      $result = $db->prepare('SELECT `id`,`email`,`group_id` FROM `auth_users` WHERE `id` = :userid;');
       $result->execute(array(':userid' => $session['user']));
       $user = $result->fetch(PDO::FETCH_ASSOC);
       if (!$user['id']) {
@@ -209,7 +209,7 @@ if (!count($errors)) {
     }
   }
   elseif (array_key_exists('verification_code', $_GET)) {
-    $result = $db->prepare('SELECT `id`,`email` FROM `auth_users` WHERE `email` = :email AND `status` = \'unverified\' AND `verify_hash` = :vcode;');
+    $result = $db->prepare('SELECT `id`,`email`,`group_id` FROM `auth_users` WHERE `email` = :email AND `status` = \'unverified\' AND `verify_hash` = :vcode;');
     $result->execute(array(':email' => @$_GET['email'], ':vcode' => $_GET['verification_code']));
     $user = $result->fetch(PDO::FETCH_ASSOC);
     if ($user['id']) {
@@ -226,7 +226,7 @@ if (!count($errors)) {
   }
   elseif (array_key_exists('reset_code', $_GET)) {
     $reset_fail = true;
-    $result = $db->prepare('SELECT `id`,`email`,`verify_hash` FROM `auth_users` WHERE `email` = :email');
+    $result = $db->prepare('SELECT `id`,`email`,`verify_hash`,`group_id` FROM `auth_users` WHERE `email` = :email');
     $result->execute(array(':email' => @$_GET['email']));
     $user = $result->fetch(PDO::FETCH_ASSOC);
     if ($user['id']) {
@@ -261,7 +261,7 @@ if (!count($errors)) {
     }
   }
   elseif (array_key_exists('clients', $_GET)) {
-    $result = $db->prepare('SELECT `id`,`email` FROM `auth_users` WHERE `id` = :userid;');
+    $result = $db->prepare('SELECT `id`,`email`,`group_id` FROM `auth_users` WHERE `id` = :userid;');
     $result->execute(array(':userid' => $session['user']));
     $user = $result->fetch(PDO::FETCH_ASSOC);
     if ($session['logged_in'] && $user['id']) {

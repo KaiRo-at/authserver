@@ -34,6 +34,9 @@ class AuthUtils {
   // function checkForSecureConnection()
   //   Check is the connection is secure and return an array of error messages (empty if it's secure).
   //
+  // function sendSecurityHeaders()
+  //   Rend HTTP headers for improving security.
+  //
   // function initSession()
   //   Initialize a session. Returns an associative array of all the DB fields of the session.
   //

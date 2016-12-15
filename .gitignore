@@ -1,3 +1,4 @@
 *~
-/oauth2-server-php
+composer.lock
+/vendor
 /php-utility-classes

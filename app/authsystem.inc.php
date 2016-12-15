@@ -20,16 +20,22 @@ $settings = json_decode(file_get_contents('/etc/kairo/auth_settings.json'), true
 if (!is_array($settings)) { trigger_error('Auth settings not found', E_USER_ERROR); }
 
 // Extended DOM document class
-require_once('../php-utility-classes/classes/document.php-class');
+require_once(__DIR__.'/../php-utility-classes/classes/document.php-class');
 // Class for sending emails
-require_once('../php-utility-classes/classes/email.php-class');
-// Class for sending emails
-require_once(__DIR__.'/authutils.php-class');
-
+require_once(__DIR__.'/../php-utility-classes/classes/email.php-class');
+// Composer-provided libraries (oauth2-server-php, doctrine DBAL)
+require_once(__DIR__.'/../vendor/autoload.php');
 // Connect to our MySQL DB
 $db = new PDO($dbdata['dsn'], $dbdata['username'], $dbdata['password']);
-// Instantiate auth utils.
-$utils = new AuthUtils($settings, $db);
+// Authentication utilities
+require_once(__DIR__.'/authutils.php-class');
+// Instantiate server utils.
+try {
+  $utils = new AuthUtils($settings, $db);
+}
+catch (Exception $e) {
+  $utils = null;
+}
 
 // This is an array of locale tags in browser style mapping to unix system locale codes to use with gettext.
 $supported_locales = array(

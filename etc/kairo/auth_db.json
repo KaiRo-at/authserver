@@ -1,0 +1,5 @@
+{
+"dsn": "mysql:dbname=example_auth;host=localhost",
+"username": "example_auth",
+"password": ""
+}

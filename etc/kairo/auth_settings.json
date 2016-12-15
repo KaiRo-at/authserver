@@ -1,0 +1,10 @@
+{
+"pwd_cost": 10,
+"pwd_nonces": [
+ ""
+],
+"piwik_enabled": false,
+"piwik_url": "/piwik/",
+"piwik_site_id": 1,
+"piwik_tracker_path": "/srv/www/piwik/vendor/piwik/piwik-php-tracker/"
+}

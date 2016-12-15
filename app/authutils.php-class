@@ -106,13 +106,37 @@ class AuthUtils {
   // function appendLoginForm($dom_element, $session, $user, [$addfields])
   //   Append a login form for the given session to the given DOM element, possibly prefilling the email from the given user info array.
   //     The optional $addfields parameter is an array of name=>value pairs of hidden fields to add to the form.
+  //
+  // function updateDBSchema()
+  //   update DB Schema to current requirements as specified by getDBSchema().
+  //
+  // function getDBSchema()
+  //   Return a DB schema with all tables, fields, etc. that the app requires.
 
   function __construct() {
     // *** constructor ***
     $this->settings = json_decode(@file_get_contents('/etc/kairo/auth_settings.json'), true);
     if (!is_array($this->settings)) { throw new ErrorException('Authentication system settings not found', 0); }
-    $this->db = new PDO('mysql:dbname='.$this->settings['db_name'].';host='.$this->settings['db_host'], $this->settings['db_username'], $this->settings['db_password']);
-    $this->db->exec("SET time_zone='+00:00';"); // Execute directly on PDO object, set session to UTC to make our gmdate() values match correctly.
+    $config = new \Doctrine\DBAL\Configuration();
+    $connectionParams = array(
+        'dbname' => $this->settings['db_name'],
+        'user' => $this->settings['db_username'],
+        'password' => $this->settings['db_password'],
+        'host' => $this->settings['db_host'],
+        'driver' => 'pdo_mysql',
+    );
+    $this->db = \Doctrine\DBAL\DriverManager::getConnection($connectionParams, $config);
+    $this->db->executeQuery('SET time_zone = "+00:00";'); // Make sure the DB runs on UTC for this connection.
+    try {
+      $last_log = $this->db->fetchColumn('SELECT time_logged FROM fs_log WHERE code = \'db_checked\' ORDER BY id DESC LIMIT 1', array(1), 0);
+      $utils_mtime = filemtime(__FILE__);
+    }
+    catch (Exception $e) {
+      $last_log = false;
+    }
+    if (!$last_log || strtotime($last_log) < $utils_mtime) {
+      $this->updateDBSchema();
+    }
     // For debugging, potentially add |robert\.box\.kairo\.at to that regex temporarily.
     $this->running_on_localhost = preg_match('/^((.+\.)?localhost|127\.0\.0\.\d+)$/', $_SERVER['SERVER_NAME']);
     if (array_key_exists('pwd_cost', $this->settings)) {
@@ -532,6 +556,103 @@ class AuthUtils {
     }
     $submit = $litem->appendInputSubmit(_('Log in / Register'));
     $submit->setAttribute('class', 'loginbutton');
+  }
+
+  function updateDBSchema() {
+    $newSchema = $this->getDBSchema();
+    $synchronizer = new \Doctrine\DBAL\Schema\Synchronizer\SingleDatabaseSynchronizer($this->db);
+    $up_sql = $synchronizer->getUpdateSchema($newSchema); // for logging only
+    $synchronizer->updateSchema($newSchema);
+    $this->log('db_checked', implode("\n", $up_sql));
+  }
+
+  function getDBSchema() {
+    $schema = new \Doctrine\DBAL\Schema\Schema();
+
+    $table = $schema->createTable('auth_sessions');
+    $table->addColumn('id', 'bigint', array('unsigned' => true, 'notnull' => true, 'autoincrement' => true));
+    $table->addColumn('sesskey', 'string', array('length' => 150, 'notnull' => true, 'default' => ''));
+    $table->addColumn('user', 'integer', array('unsigned' => true, 'notnull' => false, 'default' => null));
+    $table->addColumn('logged_in', 'boolean', array('notnull' => true, 'default' => false));
+    $table->addColumn('time_created', 'datetime', array('notnull' => true, 'default' => 'CURRENT_TIMESTAMP'));
+    $table->addColumn('time_expire', 'datetime', array('notnull' => true, 'default' => 'CURRENT_TIMESTAMP'));
+    $table->addColumn('saved_redirect', 'string', array('length' => 255, 'notnull' => true, 'default' => ''));
+    $table->setPrimaryKey(array('id'), 'id');
+    $table->addIndex(array('sesskey'), 'sesskey');
+    $table->addIndex(array('time_expire'), 'time_expire');
+
+    $table = $schema->createTable('auth_users');
+    $table->addColumn('id', 'integer', array('unsigned' => true, 'notnull' => true, 'autoincrement' => true));
+    $table->addColumn('email', 'string', array('length' => 255, 'notnull' => true, 'default' => ''));
+    $table->addColumn('pwdhash', 'string', array('length' => 255, 'notnull' => true, 'default' => ''));
+    $table->addColumn('status', 'string', array('length' => 20, 'notnull' => true, 'default' => 'unverified'));
+    $table->addColumn('verify_hash', 'string', array('length' => 150, 'notnull' => false, 'default' => null));
+    $table->addColumn('group_id', 'integer', array('unsigned' => true, 'notnull' => true, 'default' => 0));
+    $table->setPrimaryKey(array('id'), 'id');
+    $table->addUniqueIndex(array('email'), 'email');
+
+    $table = $schema->createTable('auth_log');
+    $table->addColumn('id', 'bigint', array('unsigned' => true, 'notnull' => true, 'autoincrement' => true));
+    $table->addColumn('code', 'string', array('length' => 100, 'notnull' => true, 'default' => ''));
+    $table->addColumn('info', 'text', array('notnull' => false, 'default' => null));
+    $table->addColumn('ip_addr', 'string', array('length' => 50, 'notnull' => false, 'default' => null));
+    $table->addColumn('time_logged', 'datetime', array('notnull' => true, 'default' => 'CURRENT_TIMESTAMP'));
+    $table->setPrimaryKey(array('id'), 'id');
+    $table->addIndex(array('time_logged'), 'time_logged');
+
+    /* Doctrine DBAL variant of http://bshaffer.github.io/oauth2-server-php-docs/cookbook/#define-your-schema */
+    $table = $schema->createTable('oauth_clients');
+    $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
+    $table->addColumn('client_secret', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('redirect_uri', 'string', array('length' => 2000, 'notnull' => true));
+    $table->addColumn('grant_types', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('scope', 'string', array('length' => 100, 'notnull' => false));
+    $table->addColumn('user_id', 'string', array('length' => 80, 'notnull' => false));
+    $table->setPrimaryKey(array('client_id'), 'clients_client_id_pk');
+
+    $table = $schema->createTable('oauth_access_tokens');
+    $table->addColumn('access_token', 'string', array('length' => 40, 'notnull' => true));
+    $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
+    $table->addColumn('user_id', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('expires', 'datetime', array('notnull' => true));
+    $table->addColumn('scope', 'string', array('length' => 2000, 'notnull' => false));
+    $table->setPrimaryKey(array('access_token'), 'access_token_pk');
+
+    $table = $schema->createTable('oauth_authorization_codes');
+    $table->addColumn('authorization_code', 'string', array('length' => 40, 'notnull' => true));
+    $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
+    $table->addColumn('user_id', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('redirect_uri', 'string', array('length' => 2000, 'notnull' => false));
+    $table->addColumn('expires', 'datetime', array('notnull' => true));
+    $table->addColumn('scope', 'string', array('length' => 2000, 'notnull' => false));
+    $table->setPrimaryKey(array('authorization_code'), 'auth_code_pk');
+
+    $table = $schema->createTable('oauth_refresh_tokens');
+    $table->addColumn('refresh_token', 'string', array('length' => 40, 'notnull' => true));
+    $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
+    $table->addColumn('user_id', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('expires', 'datetime', array('notnull' => true));
+    $table->addColumn('scope', 'string', array('length' => 2000, 'notnull' => false));
+    $table->setPrimaryKey(array('refresh_token'), 'refresh_token_pk');
+
+    $table = $schema->createTable('oauth_users');
+    $table->addColumn('username', 'string', array('length' => 255, 'notnull' => true));
+    $table->addColumn('password', 'string', array('length' => 2000, 'notnull' => false));
+    $table->addColumn('first_name', 'string', array('length' => 255, 'notnull' => false));
+    $table->addColumn('last_name', 'string', array('length' => 255, 'notnull' => false));
+    $table->setPrimaryKey(array('username'), 'username_pk');
+
+    $table = $schema->createTable('oauth_scopes');
+    $table->addColumn('scope', 'text', array('notnull' => false));
+    $table->addColumn('is_default', 'boolean', array('notnull' => false));
+
+    $table = $schema->createTable('oauth_jwt');
+    $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
+    $table->addColumn('subject', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('public_key', 'string', array('length' => 2000, 'notnull' => false));
+    $table->setPrimaryKey(array('client_id'), 'client_id_pk');
+
+    return $schema;
   }
 }
 ?>

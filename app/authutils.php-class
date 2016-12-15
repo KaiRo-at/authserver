@@ -117,6 +117,14 @@ class AuthUtils {
     // *** constructor ***
     $this->settings = json_decode(@file_get_contents('/etc/kairo/auth_settings.json'), true);
     if (!is_array($this->settings)) { throw new ErrorException('Authentication system settings not found', 0); }
+
+    // Sanitize settings.
+    $this->settings['piwik_enabled'] = (@$this->settings['piwik_enabled']) ? true : false;
+    $this->settings['piwik_site_id'] = intval(@$this->settings['piwik_site_id']);
+    $this->settings['piwik_url'] = strlen(@$this->settings['piwik_url']) ? $this->settings['piwik_url'] : '/piwik/';
+    $this->settings['piwik_tracker_path'] = strlen(@$this->settings['piwik_tracker_path']) ? $this->settings['piwik_tracker_path'] : '../vendor/piwik/piwik-php-tracker/';
+
+    // Initialize database.
     $config = new \Doctrine\DBAL\Configuration();
     $connectionParams = array(
         'dbname' => $this->settings['db_name'],
@@ -127,6 +135,7 @@ class AuthUtils {
     );
     $this->db = \Doctrine\DBAL\DriverManager::getConnection($connectionParams, $config);
     $this->db->executeQuery('SET time_zone = "+00:00";'); // Make sure the DB runs on UTC for this connection.
+    // Update DB schema if needed (if the utils PHP file has been changed since we last checked the DB, we trigger the update functionality).
     try {
       $last_log = $this->db->fetchColumn('SELECT time_logged FROM fs_log WHERE code = \'db_checked\' ORDER BY id DESC LIMIT 1', array(1), 0);
       $utils_mtime = filemtime(__FILE__);
@@ -137,6 +146,8 @@ class AuthUtils {
     if (!$last_log || strtotime($last_log) < $utils_mtime) {
       $this->updateDBSchema();
     }
+
+    // Set local variables.
     // For debugging, potentially add |robert\.box\.kairo\.at to that regex temporarily.
     $this->running_on_localhost = preg_match('/^((.+\.)?localhost|127\.0\.0\.\d+)$/', $_SERVER['SERVER_NAME']);
     if (array_key_exists('pwd_cost', $this->settings)) {
@@ -145,12 +156,16 @@ class AuthUtils {
     if (array_key_exists('pwd_nonces', $this->settings)) {
       $this->pwd_nonces = $this->settings['pwd_nonces'];
     }
+    if (array_key_exists('client_reg_email_whitelist', $this->settings) && is_array($this->settings['client_reg_email_whitelist'])) {
+      // If the config lists any emails, set whitelist to them, otherwise there is no whitelist and any user can add OAuth2 clients.
+      $this->client_reg_email_whitelist = $this->settings['client_reg_email_whitelist'];
+    }
   }
 
   public $settings = null;
   public $db = null;
   public $running_on_localhost = false;
-  public $client_reg_email_whitelist = array('kairo@kairo.at', 'com@kairo.at');
+  public $client_reg_email_whitelist = false;
   private $pwd_cost = 10;
   private $pwd_nonces = array();
 
@@ -365,6 +380,12 @@ class AuthUtils {
     return false;
   }
 
+  /*
+    Some resources for how to store passwords:
+    - https://blog.mozilla.org/webdev/2012/06/08/lets-talk-about-password-storage/
+    - https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines
+    oauth-server-php: https://bshaffer.github.io/oauth2-server-php-docs/cookbook
+  */
   function pwdHash($new_password) {
     $hash_prefix = '';
     if (count($this->pwd_nonces)) {

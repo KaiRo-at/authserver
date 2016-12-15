@@ -3,13 +3,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/*
-  Some resources for how to store passwords:
-  - https://blog.mozilla.org/webdev/2012/06/08/lets-talk-about-password-storage/
-  - https://wiki.mozilla.org/WebAppSec/Secure_Coding_Guidelines
-  oauth-server-php: https://bshaffer.github.io/oauth2-server-php-docs/cookbook
-*/
-
 // error reporting (for testing)
 ini_set('display_errors', 1); error_reporting(E_ALL);
 
@@ -34,12 +27,6 @@ catch (Exception $e) {
 }
 
 $utils->setUpL10n();
-
-// Sanitize settings.
-$settings['piwik_enabled'] = (@$settings['piwik_enabled']) ? true : false;
-$settings['piwik_site_id'] = intval(@$settings['piwik_site_id']);
-$settings['piwik_url'] = strlen(@$settings['piwik_url']) ? $settings['piwik_url'] : '/piwik/';
-$settings['piwik_tracker_path'] = strlen(@$settings['piwik_tracker_path']) ? $settings['piwik_tracker_path'] : '../vendor/piwik/piwik-php-tracker/';
 
 // Set up our OAuth2 Server object
 $server = $utils->getOAuthServer();

@@ -67,7 +67,7 @@ if (!count($errors)) {
                                   'error_description' => 'The user the access token is connected to was not recognized.')));
         }
         else {
-          if (in_array($user['email'], $utils->client_reg_email_whitelist)) {
+          if (($utils->client_reg_email_whitelist === false) || (in_array($user['email'], $utils->client_reg_email_whitelist))) {
             if (strlen(@$_GET['client_id']) >= 5) {
               $result = $db->prepare('SELECT `client_id`,`user_id` FROM `oauth_clients` WHERE `client_id` = :clientid;');
               $result->execute(array(':clientid' => $_GET['client_id']));

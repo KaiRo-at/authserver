@@ -462,7 +462,7 @@ if (!count($errors)) {
     $link = $litem->appendLink('./?logout', _('Log out'));
     $litem = $ulist->appendElement('li');
     $link = $litem->appendLink('./?addemail', _('Add another email address'));
-    if (in_array($user['email'], $utils->client_reg_email_whitelist)) {
+    if (($utils->client_reg_email_whitelist === false) || (in_array($user['email'], $utils->client_reg_email_whitelist))) {
       $litem = $ulist->appendElement('li');
       $link = $litem->appendLink('./?clients', _('Manage OAuth2 clients'));
     }

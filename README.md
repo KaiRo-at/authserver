@@ -20,4 +20,14 @@ The system of having a nonce saved on disk in addition to the salt that is inclu
 
 If you want to use Piwik with this service, either install it via composer or use a distribution-provided package and point the Apache config and settings to it.
 
+When using it as an OAuth2 provider for login to another site, here are the important endpoints:
+* /authorize --- authentication, call with ?response_type=code&client_id=...&state=...&scope=...&redirect_uri=... - only response_type=code is supported right now (will display HTML form to user and send JSON to redirect_uri).
+* /token --- fetch token, this is both for getting access tokens and refresh tokens (as usual).
+* /api --- API, needs to be called with a valid access token, mostly for getting email address (?email with email scope), but can also be used for adding a new OAuth2 client (?newclient with clientreg scope).
+* / (or index.php) --- You shouldn't call this from the other site, but people can access it directly and may be redirected/pointed to it in the auth flow.
+
+You need the "email" scope for normal login operation, so you can fetch a (verified) login email after authentication.
+
+There is (rudimentary) UI for adding new OAuth2 clients, which can be whitelisted for certain users only by adding their email addresses into the settings file (client_reg_email_whitelist).
+
 Please don't use GitHub for issue tracking but http://bugzilla.kairo.at/ - Product: KaiRo Software, Component: Authentication Service

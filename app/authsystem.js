@@ -4,7 +4,7 @@
 
 // Call initElements at the earliest possible stage after parsing the document.
 if (window.addEventListener) { window.addEventListener("DOMContentLoaded", initElements, false); }
-else { window.onload = initElements(); }
+else { window.onload = initElements; }
 
 function initElements() {
   var jsWarning = document.getElementById("jswarning");

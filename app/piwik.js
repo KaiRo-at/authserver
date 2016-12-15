@@ -4,6 +4,7 @@
   _paq.push(['enableLinkTracking']);
   (function() {
     var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    // dataset does not work with IE10 or lower :(
     var u=s.parentNode.dataset.piwikurl;
     _paq.push(['setTrackerUrl', u+'piwik.php']);
     _paq.push(['setSiteId', s.parentNode.dataset.piwiksite]);

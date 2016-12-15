@@ -634,7 +634,7 @@ class AuthUtils {
     $table = $schema->createTable('oauth_access_tokens');
     $table->addColumn('access_token', 'string', array('length' => 40, 'notnull' => true));
     $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
-    $table->addColumn('user_id', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('user_id', 'string', array('length' => 255, 'notnull' => false));
     $table->addColumn('expires', 'datetime', array('notnull' => true));
     $table->addColumn('scope', 'string', array('length' => 2000, 'notnull' => false));
     $table->setPrimaryKey(array('access_token'), 'access_token_pk');
@@ -642,7 +642,7 @@ class AuthUtils {
     $table = $schema->createTable('oauth_authorization_codes');
     $table->addColumn('authorization_code', 'string', array('length' => 40, 'notnull' => true));
     $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
-    $table->addColumn('user_id', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('user_id', 'string', array('length' => 255, 'notnull' => false));
     $table->addColumn('redirect_uri', 'string', array('length' => 2000, 'notnull' => false));
     $table->addColumn('expires', 'datetime', array('notnull' => true));
     $table->addColumn('scope', 'string', array('length' => 2000, 'notnull' => false));
@@ -651,7 +651,7 @@ class AuthUtils {
     $table = $schema->createTable('oauth_refresh_tokens');
     $table->addColumn('refresh_token', 'string', array('length' => 40, 'notnull' => true));
     $table->addColumn('client_id', 'string', array('length' => 80, 'notnull' => true));
-    $table->addColumn('user_id', 'string', array('length' => 80, 'notnull' => false));
+    $table->addColumn('user_id', 'string', array('length' => 255, 'notnull' => false));
     $table->addColumn('expires', 'datetime', array('notnull' => true));
     $table->addColumn('scope', 'string', array('length' => 2000, 'notnull' => false));
     $table->setPrimaryKey(array('refresh_token'), 'refresh_token_pk');

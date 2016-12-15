@@ -18,6 +18,7 @@ $dbdata = json_decode(file_get_contents('/etc/kairo/auth_db.json'), true);
 if (!is_array($dbdata)) { trigger_error('DB configuration not found', E_USER_ERROR); }
 $settings = json_decode(file_get_contents('/etc/kairo/auth_settings.json'), true);
 if (!is_array($settings)) { trigger_error('Auth settings not found', E_USER_ERROR); }
+$settings['dbdata'] = $dbdata;
 
 // Extended DOM document class
 require_once(__DIR__.'/../php-utility-classes/classes/document.php-class');
@@ -25,31 +26,18 @@ require_once(__DIR__.'/../php-utility-classes/classes/document.php-class');
 require_once(__DIR__.'/../php-utility-classes/classes/email.php-class');
 // Composer-provided libraries (oauth2-server-php, doctrine DBAL)
 require_once(__DIR__.'/../vendor/autoload.php');
-// Connect to our MySQL DB
-$db = new PDO($dbdata['dsn'], $dbdata['username'], $dbdata['password']);
 // Authentication utilities
 require_once(__DIR__.'/authutils.php-class');
 // Instantiate server utils.
 try {
-  $utils = new AuthUtils($settings, $db);
+  $utils = new AuthUtils($settings);
+  $db = $utils->db;
 }
 catch (Exception $e) {
   $utils = null;
 }
 
-// This is an array of locale tags in browser style mapping to unix system locale codes to use with gettext.
-$supported_locales = array(
-    'en-US' => 'en_US',
-    'de' => 'de_DE',
-);
-
-$textdomain = 'kairo_auth';
-$textlocale = $utils->negotiateLocale(array_keys($supported_locales));
-putenv('LC_ALL='.$supported_locales[$textlocale]);
-$selectedlocale = setlocale(LC_ALL, $supported_locales[$textlocale]);
-bindtextdomain($textdomain, '../locale');
-bind_textdomain_codeset($textdomain, 'utf-8');
-textdomain($textdomain);
+$utils->setUpL10n();
 
 // Sanitize settings.
 $settings['piwik_enabled'] = (@$settings['piwik_enabled']) ? true : false;
@@ -91,6 +79,6 @@ CREATE TABLE `auth_log` (
 );
 */
 
-// include our OAuth2 Server object
-require_once(__DIR__.'/server.inc.php');
+// Set up our OAuth2 Server object
+$server = $utils->getOAuthServer();
 ?>

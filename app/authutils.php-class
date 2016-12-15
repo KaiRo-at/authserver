@@ -7,10 +7,12 @@ class AuthUtils {
   // KaiRo.at authentication utilities PHP class
   // This class contains helper functions for the authentication system.
   //
-  // function __construct($settings, $db)
+  // function __construct($settings)
   //   CONSTRUCTOR
   //   Settings are an associative array with a numeric pwd_cost field and an array pwd_nonces field.
-  //   The DB is a PDO object.
+  //
+  // public $settings
+  //   Ab array of settings for the auth server website.
   //
   // public $db
   //   A PDO database object for interaction.
@@ -85,11 +87,17 @@ class AuthUtils {
   // function pwdNeedsRehash($user)
   //   Return true if the pwdhash field of the user uses an outdated standard and needs to be rehashed.
   //
+  // function setUpL10n()
+  //   Set up the localization stack (gettext).
+  //
   // function negotiateLocale($supportedLanguages)
   //   Return the language to use out of the given array of supported locales, via netotiation based on the HTTP Accept-Language header.
   //
   // function getGroupedEmails($group_id, [$exclude_email])
   //   Return all emails grouped in the specified group ID, optionally exclude a specific email (e.g. because you only want non-current entries)
+  //
+  // function getOAuthServer()
+  //   Return an OAuth2 server object to use for all our actual OAuth2 interaction.
   //
   // function initHTMLDocument($titletext, [$headlinetext]) {
   //   initialize the HTML document for the auth system, with some elements we always use, esp. all the scripts and stylesheet.
@@ -100,20 +108,22 @@ class AuthUtils {
   //   Append a login form for the given session to the given DOM element, possibly prefilling the email from the given user info array.
   //     The optional $addfields parameter is an array of name=>value pairs of hidden fields to add to the form.
 
-  function __construct($settings, $db) {
+  function __construct($settings) {
     // *** constructor ***
-    $this->db = $db;
+    $this->settings = $settings;
+    $this->db = new PDO($this->settings['dbdata']['dsn'], $this->settings['dbdata']['username'], $this->settings['dbdata']['password']);
     $this->db->exec("SET time_zone='+00:00';"); // Execute directly on PDO object, set session to UTC to make our gmdate() values match correctly.
     // For debugging, potentially add |robert\.box\.kairo\.at to that regex temporarily.
     $this->running_on_localhost = preg_match('/^((.+\.)?localhost|127\.0\.0\.\d+)$/', $_SERVER['SERVER_NAME']);
     if (array_key_exists('pwd_cost', $settings)) {
-      $this->pwd_cost = $settings['pwd_cost'];
+      $this->pwd_cost = $this->settings['pwd_cost'];
     }
     if (array_key_exists('pwd_nonces', $settings)) {
-      $this->pwd_nonces = $settings['pwd_nonces'];
+      $this->pwd_nonces = $this->settings['pwd_nonces'];
     }
   }
 
+  public $settings = null;
   public $db = null;
   public $running_on_localhost = false;
   public $client_reg_email_whitelist = array('kairo@kairo.at', 'com@kairo.at');
@@ -364,6 +374,22 @@ class AuthUtils {
     }
   }
 
+  function setUpL10n() {
+    // This is an array of locale tags in browser style mapping to unix system locale codes to use with gettext.
+    $supported_locales = array(
+        'en-US' => 'en_US',
+        'de' => 'de_DE',
+    );
+
+    $textdomain = 'kairo_auth';
+    $textlocale = $this->negotiateLocale(array_keys($supported_locales));
+    putenv('LC_ALL='.$supported_locales[$textlocale]);
+    $selectedlocale = setlocale(LC_ALL, $supported_locales[$textlocale]);
+    bindtextdomain($textdomain, '../locale');
+    bind_textdomain_codeset($textdomain, 'utf-8');
+    textdomain($textdomain);
+  }
+
   function negotiateLocale($supportedLanguages) {
     $nlocale = $supportedLanguages[0];
     $headers = getAllHeaders();
@@ -398,6 +424,35 @@ class AuthUtils {
       }
     }
     return $emails;
+  }
+
+  function getOAuthServer() {
+    // Simple server based on https://bshaffer.github.io/oauth2-server-php-docs/cookbook
+
+    // dbata needs to be set and be an associative array with the members 'dsn', 'username', and 'password'.
+    // dsn is the Data Source Name for your database, for exmaple "mysql:dbname=my_oauth2_db;host=localhost"
+    $oauth2_storage = new OAuth2\Storage\Pdo($this->settings['dbdata']);
+
+    // Set configuration
+    $oauth2_config = array(
+      'require_exact_redirect_uri' => false,
+      'always_issue_new_refresh_token' => true, // Needs to be handed below as well as there it's not constructed from within the server object.
+      'refresh_token_lifetime' => 90*24*3600,
+    );
+
+    // Pass a storage object or array of storage objects to the OAuth2 server class
+    $server = new OAuth2\Server($oauth2_storage, $oauth2_config);
+
+    // Add the "Client Credentials" grant type (it is the simplest of the grant types)
+    //$server->addGrantType(new OAuth2\GrantType\ClientCredentials($storage));
+
+    // Add the "Authorization Code" grant type (this is where the oauth magic happens)
+    $server->addGrantType(new OAuth2\GrantType\AuthorizationCode($oauth2_storage));
+
+    // Add the "Refresh Token" grant type (required to get longer-living resource access by generating new access tokens)
+    $server->addGrantType(new OAuth2\GrantType\RefreshToken($oauth2_storage, array('always_issue_new_refresh_token' => true)));
+
+    return $server;
   }
 
   function initHTMLDocument($titletext, $headlinetext = null) {

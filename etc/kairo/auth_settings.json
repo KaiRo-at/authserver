@@ -1,4 +1,8 @@
 {
+"db_name": "example_auth",
+"db_host": "localhost",
+"db_username": "example_auth",
+"db_password": "",
 "pwd_cost": 10,
 "pwd_nonces": [
  ""

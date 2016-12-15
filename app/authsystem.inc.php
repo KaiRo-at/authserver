@@ -13,13 +13,6 @@
 // error reporting (for testing)
 ini_set('display_errors', 1); error_reporting(E_ALL);
 
-// Read DB settings
-$dbdata = json_decode(file_get_contents('/etc/kairo/auth_db.json'), true);
-if (!is_array($dbdata)) { trigger_error('DB configuration not found', E_USER_ERROR); }
-$settings = json_decode(file_get_contents('/etc/kairo/auth_settings.json'), true);
-if (!is_array($settings)) { trigger_error('Auth settings not found', E_USER_ERROR); }
-$settings['dbdata'] = $dbdata;
-
 // Extended DOM document class
 require_once(__DIR__.'/../php-utility-classes/classes/document.php-class');
 // Class for sending emails
@@ -30,11 +23,14 @@ require_once(__DIR__.'/../vendor/autoload.php');
 require_once(__DIR__.'/authutils.php-class');
 // Instantiate server utils.
 try {
-  $utils = new AuthUtils($settings);
+  $utils = new AuthUtils();
   $db = $utils->db;
+  $settings = $utils->settings;
 }
 catch (Exception $e) {
   $utils = null;
+  print('Failed to set up utilities: '.$e->getMessage());
+  exit(1);
 }
 
 $utils->setUpL10n();

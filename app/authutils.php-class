@@ -7,12 +7,11 @@ class AuthUtils {
   // KaiRo.at authentication utilities PHP class
   // This class contains helper functions for the authentication system.
   //
-  // function __construct($settings)
+  // function __construct()
   //   CONSTRUCTOR
-  //   Settings are an associative array with a numeric pwd_cost field and an array pwd_nonces field.
   //
   // public $settings
-  //   Ab array of settings for the auth server website.
+  //   An array of settings for the auth server website.
   //
   // public $db
   //   A PDO database object for interaction.
@@ -108,17 +107,18 @@ class AuthUtils {
   //   Append a login form for the given session to the given DOM element, possibly prefilling the email from the given user info array.
   //     The optional $addfields parameter is an array of name=>value pairs of hidden fields to add to the form.
 
-  function __construct($settings) {
+  function __construct() {
     // *** constructor ***
-    $this->settings = $settings;
-    $this->db = new PDO($this->settings['dbdata']['dsn'], $this->settings['dbdata']['username'], $this->settings['dbdata']['password']);
+    $this->settings = json_decode(@file_get_contents('/etc/kairo/auth_settings.json'), true);
+    if (!is_array($this->settings)) { throw new ErrorException('Authentication system settings not found', 0); }
+    $this->db = new PDO('mysql:dbname='.$this->settings['db_name'].';host='.$this->settings['db_host'], $this->settings['db_username'], $this->settings['db_password']);
     $this->db->exec("SET time_zone='+00:00';"); // Execute directly on PDO object, set session to UTC to make our gmdate() values match correctly.
     // For debugging, potentially add |robert\.box\.kairo\.at to that regex temporarily.
     $this->running_on_localhost = preg_match('/^((.+\.)?localhost|127\.0\.0\.\d+)$/', $_SERVER['SERVER_NAME']);
-    if (array_key_exists('pwd_cost', $settings)) {
+    if (array_key_exists('pwd_cost', $this->settings)) {
       $this->pwd_cost = $this->settings['pwd_cost'];
     }
-    if (array_key_exists('pwd_nonces', $settings)) {
+    if (array_key_exists('pwd_nonces', $this->settings)) {
       $this->pwd_nonces = $this->settings['pwd_nonces'];
     }
   }
@@ -428,10 +428,10 @@ class AuthUtils {
 
   function getOAuthServer() {
     // Simple server based on https://bshaffer.github.io/oauth2-server-php-docs/cookbook
-
-    // dbata needs to be set and be an associative array with the members 'dsn', 'username', and 'password'.
-    // dsn is the Data Source Name for your database, for exmaple "mysql:dbname=my_oauth2_db;host=localhost"
-    $oauth2_storage = new OAuth2\Storage\Pdo($this->settings['dbdata']);
+    $dbdata = array('dsn' => 'mysql:dbname='.$this->settings['db_name'].';host='.$this->settings['db_host'],
+                    'username' => $this->settings['db_username'],
+                    'password' => $this->settings['db_password']);
+    $oauth2_storage = new OAuth2\Storage\Pdo($dbdata);
 
     // Set configuration
     $oauth2_config = array(

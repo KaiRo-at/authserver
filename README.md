@@ -20,6 +20,8 @@ The system of having a nonce saved on disk in addition to the salt that is inclu
 
 If you want to use Piwik with this service, either install it via composer or use a distribution-provided package and point the Apache config and settings to it.
 
+The default skin of the service is intentionally very generic. To create your own skin, copy the app/skin/default folder to a new folder next ot it (matching the skin name you put into settings) and adapt the files contained in there. Right now the SVG file is unused and you don't need it but in the future it may get used.
+
 When using it as an OAuth2 provider for login to another site, here are the important endpoints:
 * /authorize --- authentication, call with ?response_type=code&client_id=...&state=...&scope=...&redirect_uri=... - only response_type=code is supported right now (will display HTML form to user and send JSON to redirect_uri).
 * /token --- fetch token, this is both for getting access tokens and refresh tokens (as usual).

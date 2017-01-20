@@ -124,7 +124,7 @@ class AuthUtils {
     $this->settings['piwik_url'] = strlen(@$this->settings['piwik_url']) ? $this->settings['piwik_url'] : '/piwik/';
     $this->settings['piwik_tracker_path'] = strlen(@$this->settings['piwik_tracker_path']) ? $this->settings['piwik_tracker_path'] : '../vendor/piwik/piwik-php-tracker/';
     $this->settings['skin'] = (@$this->settings['skin'] && is_dir('skin/'.$this->settings['skin'])) ? $this->settings['skin'] : 'default';
-    $this->settings['operator_name'] = (@$this->settings['operator_name']) ? $this->settings['operator_name'] : 'AuthServer';
+    $this->settings['operator_name'] = (@$this->settings['operator_name']) ? $this->settings['operator_name'] : 'Example';
     $this->settings['operator_contact_url'] = (@$this->settings['operator_contact_url']) ? $this->settings['operator_contact_url'] : 'https://github.com/KaiRo_at/authserver/';
     $this->settings['info_from_email'] = (@$this->settings['info_from_email']) ? $this->settings['info_from_email'] : 'noreply@example.com';
 

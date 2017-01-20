@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kairo-auth\n"
 "Report-Msgid-Bugs-To: kairo@kairo.at\n"
-"POT-Creation-Date: 2016-11-18 18:05+0100\n"
+"POT-Creation-Date: 2017-01-20 15:46+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,12 +20,13 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Language: de\n"
 
-msgid ""
-"This login system does not work without JavaScript. Please activate "
-"JavaScript for this site to log in."
-msgstr ""
-"Dieses Login-System functioniert nicht ohne JavaScript. Bitte aktivieren Sie "
-"JavaScript für diese Seite, um sich anzumelden."
+#, php-format
+msgid "Authorization Request | %s"
+msgstr "Authorisierungsanfrage | %s"
+
+#, php-format
+msgid "%s Authentication Server"
+msgstr "%s Authentifizierungs-Server"
 
 msgid "Unexpected error while logging out."
 msgstr "Unerwarteter Fehler beim Abmelden."
@@ -33,12 +34,11 @@ msgstr "Unerwarteter Fehler beim Abmelden."
 msgid "The session system is not working."
 msgstr "Das Sitzungssystem funktioniert nicht."
 
-msgid ""
-"Please <a href=\"https://www.kairo.at/contact\">contact KaiRo.at</a> and "
-"tell the team about this."
+#, php-format
+msgid "Please <a href=\"%s\">contact %s</a> and tell the team about this."
 msgstr ""
-"Bitte <a href=\"https://www.kairo.at/contact\">kontaktieren Sie KaiRo.at</a> "
-"und benachrichtigen Sie das Team darüber."
+"Bitte <a href=\"%s\">kontaktieren Sie %s</a> und benachrichtigen Sie das "
+"Team darüber."
 
 #, php-format
 msgid "Hi %s!"
@@ -125,6 +125,13 @@ msgstr "Das Passwort darf nicht nur aus Zahlen bestehen."
 msgid "Password does have to contain at least %s different characters."
 msgstr "Das Passwort muss zumindest %s verschiedene Zeichen enthalten."
 
+msgid ""
+"This login system does not work without JavaScript. Please activate "
+"JavaScript for this site to log in."
+msgstr ""
+"Dieses Login-System functioniert nicht ohne JavaScript. Bitte aktivieren Sie "
+"JavaScript für diese Seite, um sich anzumelden."
+
 msgid "Email"
 msgstr "E-Mail"
 
@@ -150,8 +157,13 @@ msgstr ""
 msgid "Could not add user."
 msgstr "Benutzer konnte nicht hinzugefügt werden."
 
-msgid "KaiRo.at Authentication Service"
-msgstr "KaiRo.at Authentication Service"
+#, php-format
+msgid "%s Authentication Service"
+msgstr "%s Authentifizierungs-Service"
+
+#, fuzzy, php-format
+msgid "Email Verification for %s Authentication"
+msgstr "E-Mail-Verifizierung for %s-Authentifikation"
 
 msgid "Welcome!"
 msgstr "Willkommen!"
@@ -199,6 +211,10 @@ msgstr "Die Bestätigungs-E-Mail konnte nicht an Sie gesendet werden."
 
 msgid "Could not initiate reset request."
 msgstr "Anfrage zum Zurücksetzen konnte nicht initiiert werden."
+
+#, php-format
+msgid "How to reset your password for %s Authentication"
+msgstr "Aleitung zum Zurücksetzen des Passwortes für %s-Authentifizierung"
 
 msgid "Hi,"
 msgstr "Hallo,"

@@ -9,7 +9,7 @@
 ],
 "client_reg_email_whitelist": ["you@example.com"],
 "skin": "default",
-"operator_name": "AuthServer",
+"operator_name": "Example",
 "operator_contact_url": "https://github.com/KaiRo_at/authserver/",
 "info_from_email": "noreply@example.com",
 "piwik_enabled": false,

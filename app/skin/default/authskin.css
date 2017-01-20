@@ -1,0 +1,30 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+body {
+  background-color: #FFFFFF;
+}
+
+h1 {
+  background-color: #404040;
+  color: #FFFFFF;
+  background-image: url("logo-100x62.png");
+}
+
+a:link { color: #0000EE; }
+a:visited { color: #8000EE; }
+a:hover, a:active { color: #8080FF; }
+
+table.border {
+ border-color: #404040;
+}
+table.border th, table.border td {
+ border-color: #404040;
+}
+
+.otheremaillinks > a {
+  background-color: #EEEEEE;
+}
+.otheremaillinks > a:link, .otheremaillinks > a:visited { color: #BBBBBB; }
+.otheremaillinks > a:hover, .otheremaillinks > a:active { color: #808080; }

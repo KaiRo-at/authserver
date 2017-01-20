@@ -15,7 +15,8 @@ $errors = $utils->checkForSecureConnection();
 $utils->sendSecurityHeaders();
 
 // Initialize the HTML document with our basic elements.
-extract($utils->initHTMLDocument('Authorization Request | KaiRo.at', 'KaiRo.at Authentication Server')); // sets $document, $html, $head, $title, $body
+extract($utils->initHTMLDocument(sprintf(_('Authorization Request | %s'), $utils->settings['operator_name']),
+                                 sprintf(_('%s Authentication Server'), $utils->settings['operator_name']))); // sets $document, $html, $head, $title, $body
 
 if (!count($errors)) {
   $session = $utils->initSession(); // Read session or create new session and set cookie.
@@ -39,7 +40,8 @@ if (!count($errors)) {
     $user = array('id' => 0, 'email' => '');
   }
   if (is_null($session)) {
-    $errors[] = _('The session system is not working.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+    $errors[] = _('The session system is not working.').' '
+                .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
   }
   elseif ($session['logged_in']) {
     // We are logged in, process authorization request.

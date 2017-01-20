@@ -8,8 +8,12 @@
  ""
 ],
 "client_reg_email_whitelist": ["you@example.com"],
+"skin": "default",
+"operator_name": "AuthServer",
+"operator_contact_url": "https://github.com/KaiRo_at/authserver/",
+"info_from_email": "noreply@example.com",
 "piwik_enabled": false,
 "piwik_url": "/piwik/",
 "piwik_site_id": 1,
-"piwik_tracker_path": "/srv/www/piwik/vendor/piwik/piwik-php-tracker/"
+"piwik_tracker_path": "/srv/www/piwik/vendor/piwik/piwik-php-tracker/",
 }

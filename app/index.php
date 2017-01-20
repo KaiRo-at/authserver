@@ -10,14 +10,15 @@ $errors = $utils->checkForSecureConnection();
 $utils->sendSecurityHeaders();
 
 // Initialize the HTML document with our basic elements.
-extract($utils->initHTMLDocument('KaiRo.at Authentication Server')); // sets $document, $html, $head, $title, $body
+extract($utils->initHTMLDocument(sprintf(_('%s Authentication Server'), $utils->settings['operator_name']))); // sets $document, $html, $head, $title, $body
 
 if (!count($errors)) {
   $session = $utils->initSession(); // Read session or create new session and set cookie.
   $user = array('id' => 0, 'email' => '');
   $pagetype = 'default';
   if (is_null($session)) {
-    $errors[] = _('The session system is not working.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+    $errors[] = _('The session system is not working.').' '
+                .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
   }
   elseif (array_key_exists('logout', $_GET)) {
     $result = $db->prepare('UPDATE `auth_sessions` SET `logged_in` = FALSE WHERE `id` = :sessid;');
@@ -87,7 +88,8 @@ if (!count($errors)) {
             $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
             if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
               $utils->log('user_insert_failure', 'email: '.$_POST['email'].' - '.$result->errorInfo()[2]);
-              $errors[] = _('Could not add user.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+              $errors[] = _('Could not add user.').' '
+                          .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
             }
             $user = array('id' => $db->lastInsertId(),
                           'email' => $_POST['email'],
@@ -102,18 +104,18 @@ if (!count($errors)) {
             $mail->setCharset('utf-8');
             $mail->addHeader('X-KAIRO-AUTH', 'email_verification');
             $mail->addRecipient($user['email']);
-            $mail->setSender('noreply@auth.kairo.at', _('KaiRo.at Authentication Service'));
-            $mail->setSubject('Email Verification for KaiRo.at Authentication');
+            $mail->setSender($utils->settings['info_from_email'], sprintf(_('%s Authentication Service'), $utils->settings['operator_name']));
+            $mail->setSubject(sprintf(_('Email Verification for %s Authentication'), $utils->settings['operator_name']));
             $mail->addMailText(_('Welcome!')."\n\n");
             $mail->addMailText(sprintf(_('This email address, %s, has been used for registration on "%s".'),
-                                      $user['email'], _('KaiRo.at Authentication Service'))."\n\n");
+                                       $user['email'], sprintf(_('%s Authentication Service'), $utils->settings['operator_name']))."\n\n");
             $mail->addMailText(_('Please confirm that registration by clicking the following link (or calling it up in your browser):')."\n");
             $mail->addMailText($utils->getDomainBaseURL().strstr($_SERVER['REQUEST_URI'], '?', true)
                               .'?email='.rawurlencode($user['email']).'&verification_code='.rawurlencode($user['verify_hash'])."\n\n");
             $mail->addMailText(_('With this confirmation, you accept that we handle your data for the purpose of logging you into other websites when you request that.')."\n");
             $mail->addMailText(_('Those websites will get to know your email address but not your password, which we store securely.')."\n");
             $mail->addMailText(_('If you do not call this confirmation link within 72 hours, your data will be deleted from our database.')."\n\n");
-            $mail->addMailText(sprintf(_('The %s team'), 'KaiRo.at'));
+            $mail->addMailText(sprintf(_('The %s team'), $utils->settings['operator_name']));
             //$mail->setDebugAddress("robert@localhost");
             $mailsent = $mail->send();
             if ($mailsent) {
@@ -121,7 +123,8 @@ if (!count($errors)) {
             }
             else {
               $utils->log('verify_mail_failure', 'user: '.$user['id'].', email: '.$user['email']);
-              $errors[] = _('The confirmation email could not be sent to you.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+              $errors[] = _('The confirmation email could not be sent to you.').' '
+                          .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
             }
           }
           else {
@@ -130,7 +133,8 @@ if (!count($errors)) {
             $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = :vcode WHERE `id` = :userid;');
             if (!$result->execute(array(':vcode' => $vcode, ':userid' => $user['id']))) {
               $utils->log('vhash_set_failure', 'user: '.$user['id']);
-              $errors[] = _('Could not initiate reset request.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+              $errors[] = _('Could not initiate reset request.').' '
+                          .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
             }
             else {
               $utils->log('pwd_reset_request', 'user: '.$user['id'].', email: '.$user['email']);
@@ -140,16 +144,16 @@ if (!count($errors)) {
               $mail->setCharset('utf-8');
               $mail->addHeader('X-KAIRO-AUTH', 'password_reset');
               $mail->addRecipient($user['email']);
-              $mail->setSender('noreply@auth.kairo.at', _('KaiRo.at Authentication Service'));
-              $mail->setSubject('How to reset your password for KaiRo.at Authentication');
+              $mail->setSender($utils->settings['info_from_email'], sprintf(_('%s Authentication Service'), $utils->settings['operator_name']));
+              $mail->setSubject(sprintf(_('How to reset your password for %s Authentication'), $utils->settings['operator_name']));
               $mail->addMailText(_('Hi,')."\n\n");
               $mail->addMailText(sprintf(_('A request for setting a new password for this email address, %s, has been submitted on "%s".'),
-                                        $user['email'], _('KaiRo.at Authentication Service'))."\n\n");
+                                         $user['email'], sprintf(_('%s Authentication Service'), $utils->settings['operator_name']))."\n\n");
               $mail->addMailText(_('You can set a new password by clicking the following link (or calling it up in your browser):')."\n");
               $mail->addMailText($utils->getDomainBaseURL().strstr($_SERVER['REQUEST_URI'], '?', true)
                                 .'?email='.rawurlencode($user['email']).'&reset_code='.rawurlencode($resetcode)."\n\n");
               $mail->addMailText(_('If you do not call this confirmation link within 1 hour, this link expires and the existing password is being kept in place.')."\n\n");
-              $mail->addMailText(sprintf(_('The %s team'), 'KaiRo.at'));
+              $mail->addMailText(sprintf(_('The %s team'), $utils->settings['operator_name']));
               //$mail->setDebugAddress("robert@localhost");
               $mailsent = $mail->send();
               if ($mailsent) {
@@ -157,7 +161,8 @@ if (!count($errors)) {
               }
               else {
                 $utils->log('pwd_reset_mail_failure', 'user: '.$user['id'].', email: '.$user['email']);
-                $errors[] = _('The email with password reset instructions could not be sent to you.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+                $errors[] = _('The email with password reset instructions could not be sent to you.').' '
+                            .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
               }
             }
           }
@@ -216,7 +221,8 @@ if (!count($errors)) {
       $result = $db->prepare('UPDATE `auth_users` SET `verify_hash` = \'\', `status` = \'ok\' WHERE `id` = :userid;');
       if (!$result->execute(array(':userid' => $user['id']))) {
         $utils->log('verification_save_failure', 'user: '.$user['id']);
-        $errors[] = _('Could not save confirmation.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+        $errors[] = _('Could not save confirmation.').' '
+                    .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
       }
       $pagetype = 'verification_done';
     }
@@ -277,7 +283,8 @@ if (!count($errors)) {
                                     ':scope' => $scope,
                                     ':userid' => $user['id']))) {
           $utils->log('client_save_failure', 'client: '.$clientid);
-          $errors[] = _('Unexpectedly failed to save new client information.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+          $errors[] = _('Unexpectedly failed to save new client information.').' '
+                      .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
         }
       }
       if (!count($errors)) {
@@ -320,7 +327,8 @@ if (!count($errors)) {
         $result = $db->prepare('UPDATE `auth_users` SET `pwdhash` = :pwdhash, `verify_hash` = \'\' WHERE `id` = :userid;');
         if (!$result->execute(array(':pwdhash' => $newHash, ':userid' => $session['user']))) {
           $utils->log('pwd_reset_failure', 'user: '.$session['user']);
-          $errors[] = _('Password reset failed.').' '._('Please <a href="https://www.kairo.at/contact">contact KaiRo.at</a> and tell the team about this.');
+          $errors[] = _('Password reset failed.').' '
+                      .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
         }
         else {
           $pagetype = 'reset_done';

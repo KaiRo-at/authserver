@@ -141,7 +141,7 @@ class AuthUtils {
     $this->db->executeQuery('SET time_zone = "+00:00";'); // Make sure the DB runs on UTC for this connection.
     // Update DB schema if needed (if the utils PHP file has been changed since we last checked the DB, we trigger the update functionality).
     try {
-      $last_log = $this->db->fetchColumn('SELECT time_logged FROM fs_log WHERE code = \'db_checked\' ORDER BY id DESC LIMIT 1', array(1), 0);
+      $last_log = $this->db->fetchColumn('SELECT time_logged FROM auth_log WHERE code = \'db_checked\' ORDER BY id DESC LIMIT 1', array(1), 0);
       $utils_mtime = filemtime(__FILE__);
     }
     catch (Exception $e) {

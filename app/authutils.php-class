@@ -503,6 +503,12 @@ class AuthUtils {
     // Add the "Refresh Token" grant type (required to get longer-living resource access by generating new access tokens)
     $server->addGrantType(new OAuth2\GrantType\RefreshToken($oauth2_storage, array('always_issue_new_refresh_token' => true)));
 
+    // Add 'token' response type (mirroring what getDefaultResponseTypes is doing).
+    $server->addResponseType(new OAuth2\ResponseType\AccessToken($oauth2_storage, $oauth2_storage, $oauth2_config));
+
+    // Add 'code' response type (mirroring what getDefaultResponseTypes is doing).
+    $server->addResponseType(new OAuth2\ResponseType\AuthorizationCode($oauth2_storage));
+
     return $server;
   }
 
@@ -610,7 +616,7 @@ class AuthUtils {
     $table->addColumn('logged_in', 'boolean', array('notnull' => true, 'default' => false));
     $table->addColumn('time_created', 'datetime', array('notnull' => true, 'default' => 'CURRENT_TIMESTAMP'));
     $table->addColumn('time_expire', 'datetime', array('notnull' => true, 'default' => 'CURRENT_TIMESTAMP'));
-    $table->addColumn('saved_redirect', 'string', array('length' => 255, 'notnull' => true, 'default' => ''));
+    $table->addColumn('saved_redirect', 'string', array('length' => 2000, 'notnull' => true, 'default' => ''));
     $table->setPrimaryKey(array('id'), 'id');
     $table->addIndex(array('sesskey'), 'sesskey');
     $table->addIndex(array('time_expire'), 'time_expire');

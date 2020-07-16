@@ -24,7 +24,12 @@ if (!count($errors)) {
   // Handle a request to a resource and authenticate the access token
   $token_OK = $server->verifyResourceRequest(OAuth2\Request::createFromGlobals());
   if (!$token_OK) {
-    $server->getResponse()->send();
+    $response = $server->getResponse();
+    if (!count($response->getParameters())) {
+      // We get an empty response if we don't get any auth header. Let's actually note that explicitly.
+      $response->setError($response->getStatusCode(), 'auth_missing', 'Authentication missing');
+    }
+    $response->send();
     if ($settings['piwik_enabled']) { $piwikTracker->doTrackPageView('API Request: Bad Token'); }
     exit();
   }

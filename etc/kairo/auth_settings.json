@@ -13,7 +13,7 @@
 "operator_contact_url": "https://github.com/KaiRo_at/authserver/",
 "info_from_email": "noreply@example.com",
 "piwik_enabled": false,
-"piwik_url": "/piwik/",
+"piwik_url": "/matomo/",
 "piwik_site_id": 1,
 "piwik_tracker_path": "/srv/www/matomo/vendor/matomo/matomo-php-tracker/",
 }

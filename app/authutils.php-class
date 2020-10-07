@@ -121,7 +121,7 @@ class AuthUtils {
     // Sanitize settings.
     $this->settings['piwik_enabled'] = (@$this->settings['piwik_enabled']) ? true : false;
     $this->settings['piwik_site_id'] = intval(@$this->settings['piwik_site_id']);
-    $this->settings['piwik_url'] = strlen(@$this->settings['piwik_url']) ? $this->settings['piwik_url'] : '/piwik/';
+    $this->settings['piwik_url'] = strlen(@$this->settings['piwik_url']) ? $this->settings['piwik_url'] : '/matomo/';
     $this->settings['piwik_tracker_path'] = strlen(@$this->settings['piwik_tracker_path']) ? $this->settings['piwik_tracker_path'] : '../vendor/matomo/matomo-php-tracker/';
     $this->settings['skin'] = (@$this->settings['skin'] && is_dir('skin/'.$this->settings['skin'])) ? $this->settings['skin'] : 'default';
     $this->settings['operator_name'] = (@$this->settings['operator_name']) ? $this->settings['operator_name'] : 'Example';

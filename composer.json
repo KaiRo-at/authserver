@@ -1,6 +1,6 @@
 {
-"require": {
-  "doctrine/dbal": "v2.12.1",
-  "bshaffer/oauth2-server-php": "~1.11.1"
-}
+  "require": {
+    "doctrine/dbal": "^v2.12.1",
+    "bshaffer/oauth2-server-php": "~1.11.1"
+  }
 }

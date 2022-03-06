@@ -119,14 +119,14 @@ class AuthUtils {
     if (!is_array($this->settings)) { throw new ErrorException('Authentication system settings not found', 0); }
 
     // Sanitize settings.
-    $this->settings['piwik_enabled'] = (@$this->settings['piwik_enabled']) ? true : false;
-    $this->settings['piwik_site_id'] = intval(@$this->settings['piwik_site_id']);
-    $this->settings['piwik_url'] = strlen(@$this->settings['piwik_url']) ? $this->settings['piwik_url'] : '/matomo/';
-    $this->settings['piwik_tracker_path'] = strlen(@$this->settings['piwik_tracker_path']) ? $this->settings['piwik_tracker_path'] : '../vendor/matomo/matomo-php-tracker/';
-    $this->settings['skin'] = (@$this->settings['skin'] && is_dir('skin/'.$this->settings['skin'])) ? $this->settings['skin'] : 'default';
-    $this->settings['operator_name'] = (@$this->settings['operator_name']) ? $this->settings['operator_name'] : 'Example';
-    $this->settings['operator_contact_url'] = (@$this->settings['operator_contact_url']) ? $this->settings['operator_contact_url'] : 'https://github.com/KaiRo_at/authserver/';
-    $this->settings['info_from_email'] = (@$this->settings['info_from_email']) ? $this->settings['info_from_email'] : 'noreply@example.com';
+    $this->settings['piwik_enabled'] = $this->settings['piwik_enabled'] ?? false;
+    $this->settings['piwik_site_id'] = intval($this->settings['piwik_site_id'] ?? 0);
+    $this->settings['piwik_url'] = strlen($this->settings['piwik_url'] ?? '') ? $this->settings['piwik_url'] : '/matomo/';
+    $this->settings['piwik_tracker_path'] = strlen($this->settings['piwik_tracker_path'] ?? '') ? $this->settings['piwik_tracker_path'] : '../vendor/matomo/matomo-php-tracker/';
+    $this->settings['skin'] = (($this->settings['skin'] ?? false) && is_dir('skin/'.$this->settings['skin'])) ? $this->settings['skin'] : 'default';
+    $this->settings['operator_name'] = $this->settings['operator_name'] ?? 'Example';
+    $this->settings['operator_contact_url'] = $this->settings['operator_contact_url'] ?? 'https://github.com/KaiRo_at/authserver/';
+    $this->settings['info_from_email'] = $this->settings['info_from_email'] ?? 'noreply@example.com';
 
     // Initialize database.
     $config = new \Doctrine\DBAL\Configuration();
@@ -210,7 +210,7 @@ class AuthUtils {
 
   function initSession() {
     $session = null;
-    if (strlen(@$_COOKIE['sessionkey'])) {
+    if (strlen($_COOKIE['sessionkey'] ?? '')) {
       // Fetch the session - or at least try to.
       $result = $this->db->prepare('SELECT * FROM `auth_sessions` WHERE `sesskey` = :sesskey AND `time_expire` > :expire;');
       $result->execute(array(':sesskey' => $_COOKIE['sessionkey'], ':expire' => gmdate('Y-m-d H:i:s')));
@@ -296,7 +296,7 @@ class AuthUtils {
   function doRedirectIfSet($session) {
     $success = false;
     // If the session has a redirect set, make sure it's performed.
-    if (strlen(@$session['saved_redirect'])) {
+    if (strlen($session['saved_redirect'] ?? '')) {
       // Remove redirect.
       $result = $this->db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
       if (!$result->execute(array(':redir' => '', ':sessid' => $session['id']))) {
@@ -313,7 +313,7 @@ class AuthUtils {
   function resetRedirect($session) {
     $success = false;
     // If the session has a redirect set, remove it.
-    if (strlen(@$session['saved_redirect'])) {
+    if (strlen($session['saved_redirect'] ?? '')) {
       $result = $this->db->prepare('UPDATE `auth_sessions` SET `saved_redirect` = :redir WHERE `id` = :sessid;');
       if (!$result->execute(array(':redir' => '', ':sessid' => $session['id']))) {
         $this->log('redir_save_failure', 'session: '.$session['id'].', redirect: (empty)');
@@ -444,12 +444,17 @@ class AuthUtils {
   function negotiateLocale($supportedLanguages) {
     $nlocale = $supportedLanguages[0];
     $headers = getAllHeaders();
-    $accLcomp = explode(',', @$headers['Accept-Language']);
+    $accLcomp = explode(',', ($headers['Accept-Language'] ?? ''));
     $accLang = array();
     foreach ($accLcomp as $lcomp) {
       if (strlen($lcomp)) {
         $ldef = explode(';', $lcomp);
-        $accLang[$ldef[0]] = (float)((strpos(@$ldef[1],'q=')===0)?substr($ldef[1],2):1);
+        if (count($ldef) > 1 && strpos($ldef[1], 'q=') === 0) {
+          $accLang[$ldef[0]] = substr($ldef[1], 2);
+        }
+        else {
+          $accLang[$ldef[0]] = 1;
+        }
       }
     }
     if (count($accLang)) {
@@ -569,7 +574,7 @@ class AuthUtils {
     $ulist = $form->appendElement('ul');
     $ulist->setAttribute('class', 'flat login');
     $litem = $ulist->appendElement('li');
-    $inptxt = $litem->appendInputEmail('email', 30, 20, 'login_email', (intval(@$user['id'])?$user['email']:''));
+    $inptxt = $litem->appendInputEmail('email', 30, 20, 'login_email', (intval($user['id'] ?? 0) ? $user['email'] : ''));
     $inptxt->setAttribute('autocomplete', 'email');
     $inptxt->setAttribute('required', '');
     $inptxt->setAttribute('placeholder', _('Email'));

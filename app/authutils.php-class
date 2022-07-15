@@ -372,9 +372,9 @@ class AuthUtils {
     $time = time();
     $rest = is_null($offset)?($time % $valid_seconds):intval($offset); // T0, will be sent as part of code to make it valid for the full duration.
     $counter = floor(($time - $rest) / $valid_seconds);
-    $hmac = mhash(MHASH_SHA1, $counter, $session['id'].$session['sesskey']);
-    $offset = hexdec(substr(bin2hex(substr($hmac, -1)), -1)); // Get the last 4 bits as a number.
-    $totp = hexdec(bin2hex(substr($hmac, $offset, 4))) & 0x7FFFFFFF; // Take 4 bytes at the offset, discard highest bit.
+    $hmac_hex = hash_hmac('sha1', $counter, $session['id'].$session['sesskey']);
+    $offset = hexdec(substr($hmac_hex, -1)); // Get the last 4 bits as a number.
+    $totp = hexdec(substr($hmac_hex, $offset, 8)) & 0x7FFFFFFF; // Take 4 bytes (8 hex chars) at the offset, discard highest bit.
     $totp_value = sprintf('%0'.$code_digits.'d', substr($totp, -$code_digits));
     return $rest.'.'.$totp_value;
   }

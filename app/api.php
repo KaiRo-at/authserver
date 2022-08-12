@@ -62,7 +62,7 @@ if (!count($errors)) {
   }
   elseif (array_key_exists('newclient', $_GET)) {
     if ($token['scope'] == 'clientreg') {
-      if (intval(@$token['user_id'])) {
+      if (intval($token['user_id'] ?? 0)) {
         $result = $db->prepare('SELECT `id`,`email` FROM `auth_users` WHERE `id` = :userid;');
         $result->execute(array(':userid' => $token['user_id']));
         $user = $result->fetch(PDO::FETCH_ASSOC);
@@ -73,7 +73,7 @@ if (!count($errors)) {
         }
         else {
           if (($utils->client_reg_email_whitelist === false) || (in_array($user['email'], $utils->client_reg_email_whitelist))) {
-            if (strlen(@$_GET['client_id']) >= 5) {
+            if (strlen($_GET['client_id'] ?? '') >= 5) {
               $result = $db->prepare('SELECT `client_id`,`user_id` FROM `oauth_clients` WHERE `client_id` = :clientid;');
               $result->execute(array(':clientid' => $_GET['client_id']));
               $client = $result->fetch(PDO::FETCH_ASSOC);
@@ -104,13 +104,13 @@ if (!count($errors)) {
                                           'error_description' => 'Unexpectedly failed to save new secret.')));
                 }
                 else {
-                  if (strlen(@$_GET['redirect_uri'])) {
+                  if (strlen($_GET['redirect_uri'] ?? '')) {
                     $result = $db->prepare('UPDATE `oauth_clients` SET `redirect_uri` = :rediruri WHERE `client_id` = :clientid;');
                     if (!$result->execute(array(':rediruri' => $_GET['redirect_uri'],':clientid' => $client['client_id']))) {
                       $utils->log('client_save_failure', 'client: '.$client['client_id'].', new redirect_uri: '.$_GET['redirect_uri'].' - '.$result->errorInfo()[2]);
                     }
                   }
-                  if (strlen(@$_GET['scope'])) {
+                  if (strlen($_GET['scope'] ?? '')) {
                     $result = $db->prepare('UPDATE `oauth_clients` SET `scope` = :scope WHERE `client_id` = :clientid;');
                     if (!$result->execute(array(':scope' => $_GET['scope'],':clientid' => $client['client_id']))) {
                       $utils->log('client_save_failure', 'client: '.$client['client_id'].', new scope: '.$_GET['scope'].' - '.$result->errorInfo()[2]);

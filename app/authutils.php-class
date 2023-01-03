@@ -633,6 +633,8 @@ class AuthUtils {
     $table->addColumn('status', 'string', array('length' => 20, 'notnull' => true, 'default' => 'unverified'));
     $table->addColumn('verify_hash', 'string', array('length' => 150, 'notnull' => false, 'default' => null));
     $table->addColumn('group_id', 'integer', array('unsigned' => true, 'notnull' => true, 'default' => 0));
+    $table->addColumn('hcheck_question', 'string', array('length' => 100, 'notnull' => false, 'default' => null));
+    $table->addColumn('hcheck_solution', 'string', array('length' => 20, 'notnull' => false, 'default' => null));
     $table->setPrimaryKey(array('id'), 'id');
     $table->addUniqueIndex(array('email'), 'email');
 

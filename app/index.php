@@ -32,13 +32,16 @@ if (!count($errors)) {
     if (!preg_match('/^[^@]+@([^@]+\.[^@]+|localhost)$/', $_POST['email'])) {
       $errors[] = _('The email address is invalid.');
     }
-    elseif ($utils->verifyTimeCode(@$_POST['tcode'], $session)) {
-      $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash`,`group_id` FROM `auth_users` WHERE `email` = :email;');
+    elseif ($utils->verifyTimeCode($_POST['tcode'] ?? '', $session)) {
+      $result = $db->prepare('SELECT `id`, `pwdhash`, `email`, `status`, `verify_hash`, `group_id`, `hcheck_question`, `hcheck_solution` FROM `auth_users` WHERE `email` = :email;');
       $result->execute(array(':email' => $_POST['email']));
-      $user = $result->fetch(PDO::FETCH_ASSOC);
+      $user_data = $result->fetch(PDO::FETCH_ASSOC);
+      if ($user_data) {
+        $user = $user_data;
+      }
       // If we need to add the email to a group, note here which user's group we should be added to - otherwise, set to 0.
       $addgroup = (array_key_exists('grouptoexisting', $_POST) && intval($session['user']) && ($session['user'] != @$user['id'])) ? $session['user'] : 0;
-      if ($user['id'] && array_key_exists('pwd', $_POST)) {
+      if ($user['id'] && $user['status'] != 'unchecked' && array_key_exists('pwd', $_POST)) {
         // existing user, check password
         if (($user['status'] == 'ok') && $utils->pwdVerify(@$_POST['pwd'], $user)) {
           // Check if a newer hashing algorithm is available
@@ -85,20 +88,61 @@ if (!count($errors)) {
           if (!$user['id']) {
             $newHash = $utils->pwdHash($_POST['pwd']);
             $vcode = $utils->createVerificationCode();
-            $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, \'unverified\', :vcode);');
-            if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':vcode' => $vcode))) {
+            $result = $db->prepare('INSERT INTO `auth_users` (`email`, `pwdhash`, `status`, `verify_hash`) VALUES (:email, :pwdhash, :status, :vcode);');
+            if (!$result->execute(array(':email' => $_POST['email'], ':pwdhash' => $newHash, ':status' => 'unchecked', ':vcode' => $vcode))) {
               $utils->log('user_insert_failure', 'email: '.$_POST['email'].' - '.$result->errorInfo()[2]);
               $errors[] = _('Could not add user.').' '
                           .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
             }
-            $user = array('id' => $db->lastInsertId(),
-                          'email' => $_POST['email'],
-                          'pwdhash' => $newHash,
-                          'status' => 'unverified',
-                          'verify_hash' => $vcode);
+            $user = [
+              'id' => $db->lastInsertId(),
+              'email' => $_POST['email'],
+              'pwdhash' => $newHash,
+              'status' => 'unchecked',
+              'verify_hash' => $vcode,
+              'hcheck_question' => null,
+              'hcheck_solution' => null,
+            ];
             $utils->log('new_user', 'user: '.$user['id'].', email: '.$user['email']);
           }
-          if ($user['status'] == 'unverified') {
+          $utils->log('user_log_check', 'user: '.$user['id'].', email: '.$user['email'].', status: '.$user['status']);
+          if ($user['status'] == 'unchecked' && !is_null($user['hcheck_question']) && array_key_exists('hcheck_solution', $_POST)) {
+            if ($_POST['hcheck_solution'] == $user['hcheck_solution']) {
+              $result = $db->prepare('UPDATE `auth_users` SET `status` = :status, `hcheck_question` = :hcquestion, `hcheck_solution` = :hcsolution WHERE `id` = :userid;');
+              if (!$result->execute(array(':status' => 'unverified', ':hcquestion' => null, ':hcsolution' => null, ':userid' => $user['id']))) {
+                $errors[] = _('Could not update user status.').' '
+                            .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
+              }
+              $user['status'] = 'unverified';
+              $utils->log('user_checked', 'user: '.$user['id'].', email: '.$user['email']);
+            }
+            else {
+              $errors[] = _('Solution was not correct. Please start over.');
+              $utils->log('user_check_failed', 'user: '.$user['id'].', email: '.$user['email']);
+            }
+          }
+          if ($user['status'] == 'unchecked') {
+            // Display a humanity check.
+            $pagetype = 'human_check';
+            // simple numbers, we stay within the 0 to 100 range
+            $num1 = mt_rand(0, 10);
+            $num2 = mt_rand($num1, 100);
+            $operation = mt_rand(0, 1); // 0 is addition, 1 is subtraction
+            if ($operation == 0) {
+              $user['hcheck_question'] = sprintf(_('%s plus %s equals'), ($num2 - $num1), $num1);
+              $user['hcheck_solution'] = $num2;
+            }
+            else {
+              $user['hcheck_question'] = sprintf(_('%s minus %s equals'), $num2, $num1);
+              $user['hcheck_solution'] = $num2 - $num1;
+            }
+            $result = $db->prepare('UPDATE `auth_users` SET `hcheck_question` = :hcquestion, `hcheck_solution` = :hcsolution WHERE `id` = :userid;');
+            if (!$result->execute(array(':hcquestion' => $user['hcheck_question'], ':hcsolution' => $user['hcheck_solution'], ':userid' => $user['id']))) {
+              $errors[] = _('Could not generate check for being a human.').' '
+                          .sprintf(_('Please <a href="%s">contact %s</a> and tell the team about this.'), $utils->settings['operator_contact_url'], $utils->settings['operator_name']);
+            }
+          }
+          elseif ($user['status'] == 'unverified') {
             // Send email for verification and show message to point to it.
             $mail = new email();
             $mail->setCharset('utf-8');
@@ -342,7 +386,29 @@ if (!count($errors)) {
 }
 
 if (!count($errors)) {
-  if ($pagetype == 'verification_sent') {
+  if ($pagetype == 'human_check') {
+    $para = $body->appendElement('p', _('This is a new registration, please verify that you are a human by solving the calculation below.'));
+    $para->setAttribute('class', 'humancheckinfo');
+    $form = $body->appendForm('./', 'POST', 'humancheckform');
+    $form->setAttribute('id', 'humancheckform');
+    $ulist = $form->appendElement('ul');
+    $ulist->setAttribute('class', 'flat humancheck');
+    $litem = $ulist->appendElement('li');
+    $litem->setAttribute('class', 'donotshow');
+    $inptxt = $litem->appendInputEmail('email', 30, 20, 'login_email', $user['email']);
+    $inptxt->setAttribute('autocomplete', 'email');
+    $inptxt->setAttribute('placeholder', _('Email'));
+    $litem = $ulist->appendElement('li');
+    $litem->appendText($user['hcheck_question'].' ');
+    $inptxt = $litem->appendInputText('hcheck_solution', 20, 10, 'hcheck_solution');
+    $litem = $ulist->appendElement('li');
+    $litem->appendInputHidden('tcode', $utils->createTimeCode($session));
+    $submit = $litem->appendInputSubmit(_('Continue Registration'));
+    $para = $form->appendElement('p');
+    $para->setAttribute('class', 'toplink small');
+    $link = $para->appendLink('./', _('Cancel'));
+  }
+  elseif ($pagetype == 'verification_sent') {
     $para = $body->appendElement('p', sprintf(_('An email for confirmation has been sent to %s. Please follow the link provided there to complete the process.'), $user['email']));
     $para->setAttribute('class', 'verifyinfo pending');
     $para = $body->appendElement('p', _('Reload this page after you confirm to continue.'));
